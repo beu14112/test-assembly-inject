@@ -5,25 +5,20 @@ import AVFoundation
 import Foundation
 import CryptoKit
 
-// MARK: - Post-login controller workspace
-
 struct ContentView: View {
     var body: some View {
         ZStack {
-            // Livebg.mp4 is provided globally by App.swift.
             Color.black.opacity(0.30)
                 .ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 16) {
-                        workspaceHeader
-                        AssemblyControllerView()
-                    }
-                    .padding(.horizontal, 18)
-                    .padding(.top, 18)
-                    .padding(.bottom, 26)
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 16) {
+                    workspaceHeader
+                    AssemblyControllerView()
                 }
+                .padding(.horizontal, 18)
+                .padding(.top, 18)
+                .padding(.bottom, 26)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -46,24 +41,22 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Controller
-
 private struct AssemblyControllerView: View {
+    // Persist the controller selections. These selections are consumed by
+    // PREPARE FILES, which now configures the actual Assembly patch bytes.
     @AppStorage("assembly.resetGuest") private var resetGuest = false
 
-    // These controls map to feature labels that are actually present in
-    // Assembly-CSharp-patch.bytes. They are controller state; the raw patch
-    // is never altered by this view.
-    @AppStorage("assembly.feature.aimMode") private var aimMode = "off"
     @AppStorage("assembly.feature.aimBot") private var aimBot = false
     @AppStorage("assembly.feature.aimSilent") private var aimSilent = false
-    @AppStorage("assembly.feature.noRecoil") private var noRecoil = false
+    @AppStorage("assembly.feature.aimMode") private var aimMode = 0
+
     @AppStorage("assembly.feature.espLine") private var espLine = false
     @AppStorage("assembly.feature.espBox") private var espBox = false
     @AppStorage("assembly.feature.healthBar") private var healthBar = false
-    @AppStorage("assembly.feature.espName") private var espName = false
-    @AppStorage("assembly.feature.espSkeleton") private var espSkeleton = false
     @AppStorage("assembly.feature.espDistance") private var espDistance = false
+    @AppStorage("assembly.feature.espName") private var espName = false
+
+    @AppStorage("assembly.feature.noRecoil") private var noRecoil = false
     @AppStorage("assembly.feature.runSpeed") private var runSpeed = false
     @AppStorage("assembly.feature.skySpeed") private var skySpeed = false
     @AppStorage("assembly.feature.healFast") private var healFast = false
@@ -81,6 +74,8 @@ private struct AssemblyControllerView: View {
     private let expectedPatchSize = 39_019
     private let expectedPatchSHA256 = "17a61bd1c7b6bf9be9995458ae58e5a9f04f00816af9b05366fb65588a5fb1b7"
 
+    private let pinkAccent = Color(red: 1.0, green: 0.7216, blue: 0.7765)
+
     var body: some View {
         VStack(spacing: 14) {
             overviewCard
@@ -91,9 +86,7 @@ private struct AssemblyControllerView: View {
             actionsCard
             statusCard
         }
-        .onAppear {
-            loadPackageInfo()
-        }
+        .onAppear { loadPackageInfo() }
         .sheet(isPresented: Binding(
             get: { exportURL != nil },
             set: { presented in
@@ -106,16 +99,13 @@ private struct AssemblyControllerView: View {
         }
     }
 
-    // MARK: Overview
-
     private var overviewCard: some View {
         controllerCard {
             HStack(spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 13, style: .continuous)
                         .fill(Color.white.opacity(0.08))
-
-                    Image(systemName: "shippingbox.fill")
+                    Image(systemName: "cpu.fill")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.92))
                 }
@@ -125,14 +115,12 @@ private struct AssemblyControllerView: View {
                     Text("Assembly Controller")
                         .font(.system(size: 17, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
-
-                    Text("Quản lý bộ patch và cấu hình")
+                    Text("Điều khiển trạng thái của patch thật")
                         .font(.system(size: 11.5, weight: .medium, design: .rounded))
                         .foregroundStyle(.white.opacity(0.46))
                 }
 
                 Spacer()
-
                 stateBadge
             }
         }
@@ -143,7 +131,6 @@ private struct AssemblyControllerView: View {
             Circle()
                 .fill(packageState == .ready ? Color.green.opacity(0.9) : Color.white.opacity(0.35))
                 .frame(width: 6, height: 6)
-
             Text(packageState == .ready ? "READY" : "CHECKING")
                 .font(.system(size: 9.5, weight: .bold, design: .rounded))
                 .tracking(0.5)
@@ -154,13 +141,10 @@ private struct AssemblyControllerView: View {
         .background(Capsule().fill(Color.white.opacity(0.06)))
     }
 
-    // MARK: Target
-
     private var targetCard: some View {
         controllerCard {
             VStack(alignment: .leading, spacing: 10) {
                 sectionLabel("TARGET")
-
                 HStack(spacing: 10) {
                     Image(systemName: "gamecontroller.fill")
                         .font(.system(size: 15, weight: .semibold))
@@ -170,7 +154,6 @@ private struct AssemblyControllerView: View {
                         Text("Free Fire")
                             .font(.system(size: 14.5, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
-
                         Text(targetBundle)
                             .font(.system(size: 10.5, weight: .medium, design: .rounded))
                             .foregroundStyle(.white.opacity(0.40))
@@ -178,8 +161,7 @@ private struct AssemblyControllerView: View {
                     }
 
                     Spacer()
-
-                    Text("Documents")
+                    Text("Assembly patch")
                         .font(.system(size: 10.5, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white.opacity(0.56))
                         .padding(.horizontal, 9)
@@ -190,22 +172,16 @@ private struct AssemblyControllerView: View {
         }
     }
 
-    // MARK: Package
-
     private var packageCard: some View {
         controllerCard {
             VStack(alignment: .leading, spacing: 11) {
                 HStack {
                     sectionLabel("PATCH PACKAGE")
                     Spacer()
-
                     if packageState == .ready {
-                        HStack(spacing: 5) {
-                            Image(systemName: "checkmark.seal.fill")
-                            Text("VERIFIED")
-                        }
-                        .font(.system(size: 9.5, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.62))
+                        Label("VERIFIED", systemImage: "checkmark.seal.fill")
+                            .font(.system(size: 9.5, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.62))
                     }
                 }
 
@@ -215,8 +191,7 @@ private struct AssemblyControllerView: View {
                     detail: packageInfo.patchDetail
                 )
 
-                Divider()
-                    .overlay(Color.white.opacity(0.07))
+                Divider().overlay(Color.white.opacity(0.07))
 
                 packageRow(
                     icon: "doc.text",
@@ -243,8 +218,8 @@ private struct AssemblyControllerView: View {
                 if showDetails {
                     VStack(alignment: .leading, spacing: 8) {
                         detailLine(title: "PATCH SIZE", value: "\(packageInfo.patchBytes.formatted()) bytes")
-                        detailLine(title: "PATCH SHA256", value: packageInfo.patchSHA256.isEmpty ? "—" : packageInfo.patchSHA256)
-                        detailLine(title: "CONFIG OUTPUT", value: configPreview)
+                        detailLine(title: "SOURCE SHA256", value: packageInfo.patchSHA256.isEmpty ? "—" : packageInfo.patchSHA256)
+                        detailLine(title: "PATCH AFTER PREPARE", value: packageInfo.configuredSHA256.isEmpty ? "—" : packageInfo.configuredSHA256)
                     }
                     .padding(.top, 1)
                 }
@@ -252,393 +227,140 @@ private struct AssemblyControllerView: View {
         }
     }
 
-    private func packageRow(icon: String, title: String, detail: String) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: icon)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(.white.opacity(0.72))
-                .frame(width: 28, height: 28)
-                .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.white.opacity(0.06)))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 12.5, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.88))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.76)
-
-                Text(detail)
-                    .font(.system(size: 10.5, weight: .medium, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.38))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-            }
-
-            Spacer()
-        }
-    }
-
-    private func detailLine(title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(title)
-                .font(.system(size: 9, weight: .bold, design: .rounded))
-                .tracking(0.35)
-                .foregroundStyle(.white.opacity(0.30))
-
-            Text(value)
-                .font(.system(size: 9.5, weight: .medium, design: value.count > 28 ? .monospaced : .rounded))
-                .foregroundStyle(.white.opacity(0.60))
-                .lineLimit(2)
-                .minimumScaleFactor(0.75)
-                .textSelection(.enabled)
-        }
-    }
-
-    // MARK: Core Features
-
     private var featureCard: some View {
         controllerCard {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     sectionLabel("ASSEMBLY FEATURES")
                     Spacer()
-                    Text(featureSummary)
-                        .font(.system(size: 9.5, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.38))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.72)
+                    Text("SOURCE: .bytes")
+                        .font(.system(size: 8.5, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.26))
                 }
 
-                Text("Nguồn: Assembly-CSharp-patch.bytes")
-                    .font(.system(size: 9.5, weight: .medium, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.30))
+                Text("Các nút dưới đây map vào đúng state đã xác nhận trong patch.")
+                    .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.38))
 
-                featureGroupTitle("AIM", icon: "scope")
                 VStack(spacing: 0) {
-                    aimModeRow(id: "off", title: "OFF", subtitle: "Không chọn chế độ Aim")
-                    aimModeRow(id: "neck", title: "Chế Độ Aim: Cổ", subtitle: "Nhãn có trong Assembly")
-                    aimModeRow(id: "head", title: "Chế Độ Aim: Đầu", subtitle: "Nhãn có trong Assembly")
+                    featureSectionTitle("AIM")
+                    toggleRow(title: "Aim Bot", subtitle: "Bit 8192 trong dlt_st", isOn: $aimBot)
+                    toggleRow(title: "Aim Silent", subtitle: "Player.__silentOn", isOn: $aimSilent)
 
-                    featureToggleRow(
-                        title: "Aim Bot",
-                        subtitle: "Aim Bot: ON / OFF",
-                        isOn: $aimBot,
-                        onChanged: { value in setBooleanFeature("Aim Bot", value) }
-                    )
-                    featureToggleRow(
-                        title: "Aim Silent",
-                        subtitle: "Aim Silent: ON / OFF",
-                        isOn: $aimSilent,
-                        onChanged: { value in setBooleanFeature("Aim Silent", value) }
-                    )
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Chế Độ Aim")
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.90))
+                            Text(aimModeTitle)
+                                .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.38))
+                        }
+                        Spacer()
+                        Picker("Aim Mode", selection: $aimMode) {
+                            Text("Cổ").tag(0)
+                            Text("Đầu").tag(1)
+                            Text("Bụng").tag(2)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(maxWidth: 180)
+                    }
+                    .padding(.vertical, 8)
+
+                    featureSectionTitle("ESP")
+                    toggleRow(title: "ESP Line", subtitle: "Bit 2 trong dlt_st", isOn: $espLine)
+                    toggleRow(title: "ESP Box", subtitle: "Bit 1 trong dlt_st", isOn: $espBox)
+                    toggleRow(title: "Health Bar", subtitle: "Bit 512 trong dlt_st", isOn: $healthBar)
+                    toggleRow(title: "ESP Distance", subtitle: "Bit 32768 trong dlt_st", isOn: $espDistance)
+                    toggleRow(title: "ESP Name", subtitle: "Player.__espName", isOn: $espName)
+
+                    featureSectionTitle("SPEED / COMBAT")
+                    toggleRow(title: "No Recoil", subtitle: "Bit 1024 + __nrUser", isOn: $noRecoil)
+                    toggleRow(title: "Run Speed", subtitle: "Bit 16384 → __speedMul", isOn: $runSpeed)
+                    toggleRow(title: "Sky Speed", subtitle: "Bit 65536 → __skyMul", isOn: $skySpeed)
+                    toggleRow(title: "Heal Fast", subtitle: "Bit 131072 → __healMul", isOn: $healFast)
                 }
-
-                Divider()
-                    .overlay(Color.white.opacity(0.07))
-
-                featureGroupTitle("ESP", icon: "person.crop.rectangle")
-                VStack(spacing: 0) {
-                    featureToggleRow(
-                        title: "ESP Line",
-                        subtitle: "ESP Line: ON / OFF",
-                        isOn: $espLine,
-                        onChanged: { value in setBooleanFeature("ESP Line", value) }
-                    )
-                    featureToggleRow(
-                        title: "ESP Box",
-                        subtitle: "ESP Box: ON / OFF",
-                        isOn: $espBox,
-                        onChanged: { value in setBooleanFeature("ESP Box", value) }
-                    )
-                    featureToggleRow(
-                        title: "Health Bar",
-                        subtitle: "Health Bar / Hiện Thanh Máu: ON / OFF",
-                        isOn: $healthBar,
-                        onChanged: { value in setBooleanFeature("Health Bar", value) }
-                    )
-                    featureToggleRow(
-                        title: "ESP Name",
-                        subtitle: "ESP Name / Tên Địch: ON / OFF",
-                        isOn: $espName,
-                        onChanged: { value in setBooleanFeature("ESP Name", value) }
-                    )
-                    featureToggleRow(
-                        title: "ESP Skeleton",
-                        subtitle: "ESP Skeleton / Xương: ON / OFF",
-                        isOn: $espSkeleton,
-                        onChanged: { value in setBooleanFeature("ESP Skeleton", value) }
-                    )
-                    featureToggleRow(
-                        title: "ESP Distance",
-                        subtitle: "ESP Distance / Khoảng Cách: ON / OFF",
-                        isOn: $espDistance,
-                        onChanged: { value in setBooleanFeature("ESP Distance", value) }
-                    )
-                }
-
-                Divider()
-                    .overlay(Color.white.opacity(0.07))
-
-                featureGroupTitle("OTHER", icon: "slider.horizontal.3")
-                VStack(spacing: 0) {
-                    featureToggleRow(
-                        title: "No Recoil",
-                        subtitle: "No Recoil / Đạn Thẳng: ON / OFF",
-                        isOn: $noRecoil,
-                        onChanged: { value in setBooleanFeature("No Recoil", value) }
-                    )
-                    featureToggleRow(
-                        title: "Run Speed",
-                        subtitle: "Run Speed / Tăng Tốc Chạy: ON / OFF",
-                        isOn: $runSpeed,
-                        onChanged: { value in setBooleanFeature("Run Speed", value) }
-                    )
-                    featureToggleRow(
-                        title: "Sky Speed",
-                        subtitle: "Sky Speed / Nhảy Dù Nhanh: ON / OFF",
-                        isOn: $skySpeed,
-                        onChanged: { value in setBooleanFeature("Sky Speed", value) }
-                    )
-                    featureToggleRow(
-                        title: "Heal Fast",
-                        subtitle: "Heal Fast / Hồi Máu Nhanh: ON / OFF",
-                        isOn: $healFast,
-                        onChanged: { value in setBooleanFeature("Heal Fast", value) }
-                    )
-                }
-
-                Text("Chams không nằm trong Assembly-CSharp-patch.bytes. Chams là các gói .1411 riêng.")
-                    .font(.system(size: 9.5, weight: .medium, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.28))
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 2)
             }
         }
     }
-
-    private var featureSummary: String {
-        var parts: [String] = []
-        if aimMode != "off" { parts.append("AIM: \(aimModeTitle(aimMode))") }
-        if aimBot { parts.append("AIM BOT") }
-        if aimSilent { parts.append("AIM SILENT") }
-        if espLine || espBox || healthBar || espName || espSkeleton || espDistance { parts.append("ESP") }
-        if noRecoil || runSpeed || skySpeed || healFast { parts.append("OTHER") }
-        return parts.isEmpty ? "ALL OFF" : parts.joined(separator: " • ")
-    }
-
-    private func aimModeRow(id: String, title: String, subtitle: String) -> some View {
-        let active = aimMode == id
-        return Button {
-            guard !active else { return }
-            aimMode = id
-            statusText = id == "off" ? "Chế độ Aim đã tắt." : "Đã chọn \(title)."
-            BeuSound.toggle()
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: id == "off" ? "circle" : "scope")
-                    .font(.system(size: 12.5, weight: .semibold))
-                    .foregroundStyle(active ? pinkAccent : .white.opacity(0.55))
-                    .frame(width: 25, height: 25)
-                    .background(
-                        RoundedRectangle(cornerRadius: 7, style: .continuous)
-                            .fill(active ? pinkAccent.opacity(0.13) : Color.white.opacity(0.045))
-                    )
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.system(size: 12.5, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white.opacity(active ? 0.96 : 0.72))
-                    Text(subtitle)
-                        .font(.system(size: 9.5, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.33))
-                }
-
-                Spacer()
-
-                Image(systemName: active ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(active ? pinkAccent : .white.opacity(0.25))
-            }
-            .padding(.vertical, 7)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func featureGroupTitle(_ title: String, icon: String) -> some View {
-        HStack(spacing: 7) {
-            Image(systemName: icon)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(pinkAccent.opacity(0.82))
-            Text(title)
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-                .tracking(0.7)
-                .foregroundStyle(.white.opacity(0.58))
-        }
-    }
-
-    private func featureToggleRow(
-        title: String,
-        subtitle: String,
-        isOn: Binding<Bool>,
-        onChanged: ((Bool) -> Void)?
-    ) -> some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 12.5, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.84))
-
-                Text(subtitle)
-                    .font(.system(size: 9.5, weight: .medium, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.33))
-            }
-
-            Spacer()
-
-            Toggle("", isOn: Binding(
-                get: { isOn.wrappedValue },
-                set: { value in
-                    isOn.wrappedValue = value
-                    onChanged?(value)
-                }
-            ))
-            .labelsHidden()
-            .tint(pinkAccent)
-            .scaleEffect(0.84)
-        }
-        .padding(.vertical, 7)
-    }
-
-    private var pinkAccent: Color {
-        Color(red: 1.0, green: 184.0 / 255.0, blue: 198.0 / 255.0)
-    }
-
-    private func setBooleanFeature(_ title: String, _ value: Bool) {
-        statusText = value ? "Đã bật \(title)." : "Đã tắt \(title)."
-        BeuSound.toggle()
-    }
-
-    private func aimModeTitle(_ value: String) -> String {
-        switch value {
-        case "neck": return "Cổ"
-        case "head": return "Đầu"
-        default: return "OFF"
-        }
-    }
-
-    // MARK: Configuration
 
     private var configurationCard: some View {
         controllerCard {
-            VStack(alignment: .leading, spacing: 5) {
-                HStack {
-                    sectionLabel("CONFIGURATION")
-                    Spacer()
-                    Text("testCodePatch = true")
-                        .font(.system(size: 9.5, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.38))
-                }
-
+            VStack(alignment: .leading, spacing: 10) {
+                sectionLabel("CONFIGURATION")
                 toggleRow(
                     title: "Reset Guest",
-                    subtitle: resetGuest ? "resetGuest = true" : "resetGuest = false",
+                    subtitle: "localConfig.json • mặc định OFF",
                     isOn: $resetGuest
                 )
+                Text("testCodePatch luôn được giữ TRUE và không hiển thị thành toggle.")
+                    .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.32))
             }
         }
     }
-
-    // MARK: Actions
 
     private var actionsCard: some View {
-        VStack(spacing: 10) {
-            Button {
-                preparePackage()
-            } label: {
-                HStack(spacing: 9) {
-                    if preparing {
-                        ProgressView()
-                            .tint(.white)
-                    } else {
-                        Image(systemName: prepared ? "checkmark.circle.fill" : "arrow.down.doc.fill")
-                            .font(.system(size: 15, weight: .bold))
+        controllerCard {
+            VStack(spacing: 10) {
+                HStack(spacing: 10) {
+                    Button(action: preparePackage) {
+                        actionLabel(
+                            title: preparing ? "PREPARING..." : "PREPARE FILES",
+                            icon: "slider.horizontal.3"
+                        )
                     }
+                    .disabled(preparing || exporting || packageState != .ready)
 
-                    Text(preparing ? "ĐANG CHUẨN BỊ" : (prepared ? "ĐÃ CHUẨN BỊ" : "PREPARE FILES"))
-                        .font(.system(size: 13.5, weight: .bold, design: .rounded))
-                        .tracking(0.5)
-                }
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 52)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color.white.opacity(prepared ? 0.14 : 0.11))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
-                )
-            }
-            .buttonStyle(.plain)
-            .disabled(preparing || packageState != .ready)
-
-            Button {
-                exportPackage()
-            } label: {
-                HStack(spacing: 8) {
-                    if exporting {
-                        ProgressView()
-                            .tint(.white.opacity(0.86))
-                    } else {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 13, weight: .bold))
+                    Button(action: exportPackage) {
+                        actionLabel(
+                            title: exporting ? "EXPORTING..." : "EXPORT PACKAGE",
+                            icon: "square.and.arrow.up"
+                        )
                     }
-
-                    Text(exporting ? "ĐANG TẠO GÓI" : "EXPORT PACKAGE")
-                        .font(.system(size: 12.5, weight: .bold, design: .rounded))
-                        .tracking(0.45)
+                    .disabled(preparing || exporting || packageState != .ready)
                 }
-                .foregroundStyle(.white.opacity(0.82))
-                .frame(maxWidth: .infinity)
-                .frame(height: 44)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color.white.opacity(0.055))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(Color.white.opacity(0.10), lineWidth: 1)
-                )
+
+                if prepared {
+                    Text("Đã tạo patch đã cấu hình trong PreparedAssembly/.")
+                        .font(.system(size: 10.5, weight: .semibold, design: .rounded))
+                        .foregroundStyle(pinkAccent.opacity(0.92))
+                }
             }
-            .buttonStyle(.plain)
-            .disabled(exporting || packageState != .ready)
         }
     }
 
-    private var configPreview: String {
-        "{\"testCodePatch\":true,\"resetGuest\":\(resetGuest ? "true" : "false")}"
+    private func actionLabel(title: String, icon: String) -> some View {
+        HStack(spacing: 7) {
+            Image(systemName: icon)
+            Text(title)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .font(.system(size: 11.5, weight: .bold, design: .rounded))
+        .tracking(0.55)
+        .foregroundStyle(.black)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(pinkAccent)
+        )
     }
 
-    // MARK: Status
-
     private var statusCard: some View {
-        HStack(spacing: 9) {
-            Circle()
-                .fill(statusColor.opacity(0.92))
-                .frame(width: 8, height: 8)
+        HStack(spacing: 10) {
+            Image(systemName: statusIcon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(statusColor)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(statusText)
+                Text(statusTitle)
                     .font(.system(size: 12.5, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.84))
-
-                Text("Bộ file được chuẩn bị trong sandbox của app.")
+                Text(statusText)
                     .font(.system(size: 10.5, weight: .medium, design: .rounded))
                     .foregroundStyle(.white.opacity(0.34))
+                    .lineLimit(3)
             }
-
             Spacer()
         }
         .padding(.horizontal, 14)
@@ -653,136 +375,145 @@ private struct AssemblyControllerView: View {
         )
     }
 
-    private var statusColor: Color {
+    private var statusTitle: String {
         switch packageState {
-        case .checking:
-            return .white
-        case .ready:
-            return Color.green
-        case .failed:
-            return Color.red
+        case .checking: return "CHECKING"
+        case .ready: return prepared ? "CONFIGURED" : "READY"
+        case .failed: return "ERROR"
         }
     }
 
-    // MARK: Package operations
+    private var statusIcon: String {
+        switch packageState {
+        case .checking: return "hourglass"
+        case .ready: return prepared ? "checkmark.circle.fill" : "checkmark.seal.fill"
+        case .failed: return "xmark.octagon.fill"
+        }
+    }
+
+    private var statusColor: Color {
+        switch packageState {
+        case .checking: return .white.opacity(0.65)
+        case .ready: return prepared ? pinkAccent : .green
+        case .failed: return .red
+        }
+    }
+
+    private var aimModeTitle: String {
+        switch aimMode {
+        case 0: return "Cổ"
+        case 1: return "Đầu"
+        default: return "Bụng"
+        }
+    }
+
+    private var configPreview: String {
+        "Reset Guest: \(resetGuest ? "ON" : "OFF") • testCodePatch: TRUE"
+    }
 
     private func loadPackageInfo() {
         packageState = .checking
         statusText = "Đang kiểm tra bộ file..."
+        prepared = false
 
         DispatchQueue.global(qos: .userInitiated).async {
-            let patchURL = Bundle.main.url(forResource: "Assembly-CSharp-patch", withExtension: "bytes")
-            let configURL = Bundle.main.url(forResource: "localConfig", withExtension: "json")
+            do {
+                guard let patchURL = Bundle.main.url(forResource: "Assembly-CSharp-patch", withExtension: "bytes"),
+                      let configURL = Bundle.main.url(forResource: "localConfig", withExtension: "json") else {
+                    throw ControllerError.missingPatch
+                }
 
-            guard let patchURL, let configURL,
-                  let patchData = try? Data(contentsOf: patchURL),
-                  let configData = try? Data(contentsOf: configURL) else {
+                let patchData = try Data(contentsOf: patchURL)
+                let configData = try Data(contentsOf: configURL)
+                let hash = Self.sha256(patchData)
+                let ok = patchData.count == expectedPatchSize
+                    && hash == expectedPatchSHA256
+                    && !configData.isEmpty
+
+                DispatchQueue.main.async {
+                    packageInfo = PackageInfo(
+                        patchBytes: patchData.count,
+                        patchSHA256: hash,
+                        configuredSHA256: "",
+                        patchDetail: "\(patchData.count.formatted()) bytes  •  SHA256 \(Self.shortHash(hash))"
+                    )
+                    packageState = ok ? .ready : .failed
+                    statusText = ok
+                        ? "Bản gốc khớp hash/size đã đăng ký."
+                        : "Bản gốc không khớp hash/size đã đăng ký."
+                }
+            } catch {
                 DispatchQueue.main.async {
                     packageInfo = .empty
                     packageState = .failed
-                    statusText = "Thiếu file trong bundle."
+                    statusText = error.localizedDescription
                 }
-                return
-            }
-
-            let hash = SHA256.hash(data: patchData)
-                .map { String(format: "%02x", $0) }
-                .joined()
-
-            let ok = patchData.count == expectedPatchSize && hash == expectedPatchSHA256 && !configData.isEmpty
-
-            let info = PackageInfo(
-                patchBytes: patchData.count,
-                patchSHA256: hash,
-                patchDetail: "\(patchData.count.formatted()) bytes  •  SHA256 \(Self.shortHash(hash))"
-            )
-
-            DispatchQueue.main.async {
-                packageInfo = info
-                packageState = ok ? .ready : .failed
-                statusText = ok ? "Bộ patch đã sẵn sàng." : "Bộ patch không khớp bản đã đăng ký."
             }
         }
     }
 
     private func preparePackage() {
-        guard packageState == .ready else { return }
+        guard packageState == .ready, !preparing else { return }
 
         preparing = true
         prepared = false
-        statusText = "Đang chuẩn bị bộ file..."
+        statusText = "Đang map toggle vào Assembly-CSharp-patch.bytes..."
         BeuSound.glass()
 
+        let settings = AssemblyPatchSettings(
+            aimBot: aimBot,
+            aimSilent: aimSilent,
+            aimMode: aimMode,
+            espLine: espLine,
+            espBox: espBox,
+            healthBar: healthBar,
+            espDistance: espDistance,
+            espName: espName,
+            noRecoil: noRecoil,
+            runSpeed: runSpeed,
+            skySpeed: skySpeed,
+            healFast: healFast
+        )
         let reset = resetGuest
-        let currentAimMode = aimMode
-        let currentAimBot = aimBot
-        let currentAimSilent = aimSilent
-        let currentNoRecoil = noRecoil
-        let currentESPLine = espLine
-        let currentESPBox = espBox
-        let currentHealthBar = healthBar
-        let currentESPName = espName
-        let currentESPSkeleton = espSkeleton
-        let currentESPDistance = espDistance
-        let currentRunSpeed = runSpeed
-        let currentSkySpeed = skySpeed
-        let currentHealFast = healFast
-        let config = "{\"testCodePatch\":true,\"resetGuest\":\(reset ? "true" : "false")}\n"
 
         DispatchQueue.global(qos: .userInitiated).async {
             do {
-                guard let patchURL = Bundle.main.url(
-                    forResource: "Assembly-CSharp-patch",
-                    withExtension: "bytes"
-                ) else {
+                guard let patchURL = Bundle.main.url(forResource: "Assembly-CSharp-patch", withExtension: "bytes") else {
                     throw ControllerError.missingPatch
                 }
 
-                let patchData = try Data(contentsOf: patchURL)
-                let fileManager = FileManager.default
-                let root = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                let source = try Data(contentsOf: patchURL)
+                let configured = try AssemblyPatchConfigurator.configure(source: source, settings: settings)
+                let configuredHash = Self.sha256(configured)
+
+                let root = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
                 let output = root.appendingPathComponent("PreparedAssembly", isDirectory: true)
+                try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
 
-                try fileManager.createDirectory(at: output, withIntermediateDirectories: true)
+                let patchOut = output.appendingPathComponent("Assembly-CSharp-patch.bytes")
+                let configOut = output.appendingPathComponent("localConfig.json")
+                let manifestOut = output.appendingPathComponent("controllerFeatures.json")
 
-                try patchData.write(
-                    to: output.appendingPathComponent("Assembly-CSharp-patch.bytes"),
-                    options: .atomic
-                )
+                try configured.write(to: patchOut, options: .atomic)
 
-                try Data(config.utf8).write(
-                    to: output.appendingPathComponent("localConfig.json"),
-                    options: .atomic
-                )
+                let configJSON = "{\"testCodePatch\":true,\"resetGuest\":\(reset ? "true" : "false")}\n"
+                try Data(configJSON.utf8).write(to: configOut, options: .atomic)
 
-                let featureConfig = AssemblyFeatureConfiguration(
-                    source: "Assembly-CSharp-patch.bytes",
-                    aimMode: currentAimMode,
-                    aimBot: currentAimBot,
-                    aimSilent: currentAimSilent,
-                    noRecoil: currentNoRecoil,
-                    espLine: currentESPLine,
-                    espBox: currentESPBox,
-                    healthBar: currentHealthBar,
-                    espName: currentESPName,
-                    espSkeleton: currentESPSkeleton,
-                    espDistance: currentESPDistance,
-                    runSpeed: currentRunSpeed,
-                    skySpeed: currentSkySpeed,
-                    healFast: currentHealFast
+                let manifest = ControllerManifest(
+                    sourceSHA256: Self.sha256(source),
+                    configuredSHA256: configuredHash,
+                    settings: settings,
+                    resetGuest: reset
                 )
                 let encoder = JSONEncoder()
                 encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-                let featureData = try encoder.encode(featureConfig)
-                try featureData.write(
-                    to: output.appendingPathComponent("controllerFeatures.json"),
-                    options: .atomic
-                )
+                try encoder.encode(manifest).write(to: manifestOut, options: .atomic)
 
                 DispatchQueue.main.async {
+                    packageInfo.configuredSHA256 = configuredHash
                     prepared = true
                     preparing = false
-                    statusText = "Đã áp dụng cấu hình tính năng."
+                    statusText = "Đã tạo bản patch theo đúng trạng thái các nút."
                     BeuSound.success()
                 }
             } catch {
@@ -790,7 +521,7 @@ private struct AssemblyControllerView: View {
                     preparing = false
                     prepared = false
                     packageState = .failed
-                    statusText = "Chuẩn bị thất bại: \(error.localizedDescription)"
+                    statusText = "Prepare thất bại: \(error.localizedDescription)"
                     BeuSound.error()
                 }
             }
@@ -798,68 +529,59 @@ private struct AssemblyControllerView: View {
     }
 
     private func exportPackage() {
-        guard packageState == .ready else { return }
+        guard packageState == .ready, !exporting else { return }
+
+        // Export is deliberately based on the prepared/configured files.
+        if !prepared {
+            preparePackage()
+            statusText = "Đã nhận yêu cầu. Prepare trước, sau đó Export lại."
+            return
+        }
 
         exporting = true
-        statusText = "Đang tạo gói ZIP..."
+        statusText = "Đang đóng gói bản patch đã cấu hình..."
         BeuSound.soft()
-
-        let reset = resetGuest
-        let config = "{\"testCodePatch\":true,\"resetGuest\":\(reset ? "true" : "false")}\n"
 
         DispatchQueue.global(qos: .userInitiated).async {
             do {
-                guard let patchURL = Bundle.main.url(
-                    forResource: "Assembly-CSharp-patch",
-                    withExtension: "bytes"
-                ) else {
-                    throw ControllerError.missingPatch
+                let root = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                let preparedDir = root.appendingPathComponent("PreparedAssembly", isDirectory: true)
+                let patch = preparedDir.appendingPathComponent("Assembly-CSharp-patch.bytes")
+                let config = preparedDir.appendingPathComponent("localConfig.json")
+                let manifest = preparedDir.appendingPathComponent("controllerFeatures.json")
+
+                guard FileManager.default.fileExists(atPath: patch.path),
+                      FileManager.default.fileExists(atPath: config.path) else {
+                    throw ControllerError.notPrepared
                 }
 
-                let root = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-                let work = root.appendingPathComponent("ExportedAssembly", isDirectory: true)
-                try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
-
-                let patchCopy = work.appendingPathComponent("Assembly-CSharp-patch.bytes")
-                let configURL = work.appendingPathComponent("localConfig.json")
                 let zipURL = root.appendingPathComponent("BEU-Assembly-Package.zip")
-
                 try? FileManager.default.removeItem(at: zipURL)
 
-                if FileManager.default.fileExists(atPath: patchCopy.path) {
-                    try FileManager.default.removeItem(at: patchCopy)
-                }
-                if FileManager.default.fileExists(atPath: configURL.path) {
-                    try FileManager.default.removeItem(at: configURL)
+                var items = [patch, config]
+                if FileManager.default.fileExists(atPath: manifest.path) {
+                    items.append(manifest)
                 }
 
-                try FileManager.default.copyItem(at: patchURL, to: patchCopy)
-                try Data(config.utf8).write(to: configURL, options: .atomic)
-
-                _ = try ZIPArchiveWriter.write(
-                    items: [patchCopy, configURL],
-                    to: zipURL
-                )
+                _ = try ZIPArchiveWriter.write(items: items, to: zipURL)
 
                 DispatchQueue.main.async {
                     exporting = false
                     exportURL = zipURL
-                    statusText = "Đã tạo gói ZIP."
+                    statusText = "Đã export bản patch đã cấu hình."
                     BeuSound.success()
                 }
             } catch {
                 DispatchQueue.main.async {
                     exporting = false
-                    statusText = "Xuất gói thất bại: \(error.localizedDescription)"
+                    statusText = "Export thất bại: \(error.localizedDescription)"
                     BeuSound.error()
                 }
             }
         }
     }
 
-    private func controllerCard<Content: View>(
-        @ViewBuilder content: () -> Content
-    ) -> some View {
+    private func controllerCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             content()
         }
@@ -882,11 +604,24 @@ private struct AssemblyControllerView: View {
             .foregroundStyle(.white.opacity(0.32))
     }
 
-    private func toggleRow(
-        title: String,
-        subtitle: String,
-        isOn: Binding<Bool>
-    ) -> some View {
+    private func featureSectionTitle(_ title: String) -> some View {
+        HStack(spacing: 8) {
+            Rectangle()
+                .fill(pinkAccent.opacity(0.72))
+                .frame(width: 3, height: 18)
+                .clipShape(Capsule())
+
+            Text(title)
+                .font(.system(size: 9.5, weight: .bold, design: .rounded))
+                .tracking(1.0)
+                .foregroundStyle(.white.opacity(0.34))
+
+            Spacer()
+        }
+        .padding(.top, 7)
+    }
+
+    private func toggleRow(title: String, subtitle: String, isOn: Binding<Bool>) -> some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -899,13 +634,54 @@ private struct AssemblyControllerView: View {
             }
 
             Spacer()
-
             Toggle("", isOn: isOn)
                 .labelsHidden()
                 .tint(pinkAccent)
                 .scaleEffect(0.9)
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 7)
+    }
+
+    private func packageRow(icon: String, title: String, detail: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.white.opacity(0.72))
+                .frame(width: 28, height: 28)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.white.opacity(0.06))
+                )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.88))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.76)
+                Text(detail)
+                    .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.34))
+            }
+            Spacer()
+        }
+    }
+
+    private func detailLine(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.system(size: 8.5, weight: .bold, design: .rounded))
+                .tracking(0.75)
+                .foregroundStyle(.white.opacity(0.26))
+            Text(value)
+                .font(.system(size: 10, weight: .medium, design: .rounded))
+                .foregroundStyle(.white.opacity(0.54))
+                .textSelection(.enabled)
+        }
+    }
+
+    private static func sha256(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
     private static func shortHash(_ hash: String) -> String {
@@ -913,59 +689,197 @@ private struct AssemblyControllerView: View {
         return String(hash.prefix(8)) + "…" + String(hash.suffix(4))
     }
 
-    private struct FeatureOption: Identifiable {
-        let id: String
-        let title: String
-        let subtitle: String
-        let icon: String
-    }
-
-    private struct AssemblyFeatureConfiguration: Codable {
-        let source: String
-        let aimMode: String
-        let aimBot: Bool
-        let aimSilent: Bool
-        let noRecoil: Bool
-        let espLine: Bool
-        let espBox: Bool
-        let healthBar: Bool
-        let espName: Bool
-        let espSkeleton: Bool
-        let espDistance: Bool
-        let runSpeed: Bool
-        let skySpeed: Bool
-        let healFast: Bool
+    private enum PackageState {
+        case checking, ready, failed
     }
 
     private struct PackageInfo {
         let patchBytes: Int
         let patchSHA256: String
+        var configuredSHA256: String
         let patchDetail: String
 
         static let empty = PackageInfo(
             patchBytes: 0,
             patchSHA256: "",
+            configuredSHA256: "",
             patchDetail: "Chưa kiểm tra"
         )
     }
 
-    private enum PackageState {
-        case checking, ready, failed
-    }
-
     private enum ControllerError: LocalizedError {
         case missingPatch
+        case notPrepared
 
         var errorDescription: String? {
             switch self {
             case .missingPatch:
                 return "Không tìm thấy Assembly-CSharp-patch.bytes trong bundle."
+            case .notPrepared:
+                return "Chưa có patch đã cấu hình."
             }
         }
     }
 }
 
-// MARK: - Share sheet
+// MARK: - Actual Assembly patch configurator
+
+private struct AssemblyPatchSettings: Codable {
+    let aimBot: Bool
+    let aimSilent: Bool
+    let aimMode: Int
+    let espLine: Bool
+    let espBox: Bool
+    let healthBar: Bool
+    let espDistance: Bool
+    let espName: Bool
+    let noRecoil: Bool
+    let runSpeed: Bool
+    let skySpeed: Bool
+    let healFast: Bool
+}
+
+private struct ControllerManifest: Codable {
+    let sourceSHA256: String
+    let configuredSHA256: String
+    let settings: AssemblyPatchSettings
+    let resetGuest: Bool
+}
+
+private enum AssemblyPatchConfigurator {
+    private static let expectedSize = 39_019
+    private static let expectedSHA256 = "17a61bd1c7b6bf9be9995458ae58e5a9f04f00816af9b05366fb65588a5fb1b7"
+
+    // Exact method-4 offsets for the supplied 39,019-byte patch.
+    // Each instruction is encoded as: Int32 opcode + Int32 operand.
+    private static let noRecoilOpOffset = 10_431
+    private static let noRecoilOperandOffset = 10_435
+    private static let dltStDefaultOpOffset = 13_351
+    private static let dltStDefaultOperandOffset = 13_355
+    private static let aimModeDefaultOpOffset = 13_415
+    private static let aimModeDefaultOperandOffset = 13_419
+    private static let silentDefaultOpOffset = 13_479
+    private static let silentDefaultOperandOffset = 13_483
+    private static let espNameDefaultOpOffset = 13_511
+    private static let espNameDefaultOperandOffset = 13_515
+
+    // String table payload offsets; replacements keep identical byte lengths.
+    private static let dltStStringOffset = 37_750
+    private static let dltAimStringOffset = 37_757
+    private static let dltTabStringOffset = 37_765
+    private static let dltSilStringOffset = 37_773
+    private static let dltNmStringOffset = 37_781
+
+    // Actual dlt_st masks proven from the patch's UI/bit-test logic.
+    private static let maskESPLine = 2
+    private static let maskESPBox = 1
+    private static let maskHealthBar = 512
+    private static let maskNoRecoil = 1024
+    private static let maskAimBot = 8192
+    private static let maskRunSpeed = 16384
+    private static let maskSkySpeed = 65536
+    private static let maskHealFast = 131072
+    private static let maskESPDistance = 32768
+
+    static func configure(source: Data, settings: AssemblyPatchSettings) throws -> Data {
+        guard source.count == expectedSize else { throw ConfiguratorError.invalidSize(source.count) }
+        guard sha256(source) == expectedSHA256 else { throw ConfiguratorError.invalidSourceHash }
+
+        var out = source
+
+        let dltState =
+            (settings.espLine ? maskESPLine : 0)
+            | (settings.espBox ? maskESPBox : 0)
+            | (settings.healthBar ? maskHealthBar : 0)
+            | (settings.noRecoil ? maskNoRecoil : 0)
+            | (settings.aimBot ? maskAimBot : 0)
+            | (settings.runSpeed ? maskRunSpeed : 0)
+            | (settings.skySpeed ? maskSkySpeed : 0)
+            | (settings.healFast ? maskHealFast : 0)
+            | (settings.espDistance ? maskESPDistance : 0)
+
+        // Startup default for dlt_st: PlayerPrefs.GetInt(key, desiredMask)
+        writeInt32(&out, at: dltStDefaultOpOffset, value: 180) // Ldc_I4
+        writeInt32(&out, at: dltStDefaultOperandOffset, value: dltState)
+
+        // __aimMode startup default: 0 = Cổ, 1 = Đầu, 2 = Bụng.
+        let normalizedAimMode = min(max(settings.aimMode, 0), 2)
+        writeInt32(&out, at: aimModeDefaultOpOffset, value: 180)
+        writeInt32(&out, at: aimModeDefaultOperandOffset, value: normalizedAimMode)
+
+        // __silentOn startup default.
+        writeInt32(&out, at: silentDefaultOpOffset, value: 180)
+        writeInt32(&out, at: silentDefaultOperandOffset, value: settings.aimSilent ? 1 : 0)
+
+        // __espName startup default.
+        writeInt32(&out, at: espNameDefaultOpOffset, value: 180)
+        writeInt32(&out, at: espNameDefaultOperandOffset, value: settings.espName ? 1 : 0)
+
+        // No-recoil has a one-time guard field __nrUser. For ON we force that
+        // guard true so startup does not clear bit 1024 from dlt_st.
+        if settings.noRecoil {
+            writeInt32(&out, at: noRecoilOpOffset, value: 180) // Ldc_I4
+            writeInt32(&out, at: noRecoilOperandOffset, value: 1)
+        } else {
+            writeInt32(&out, at: noRecoilOpOffset, value: 144) // Ldsfld
+            writeInt32(&out, at: noRecoilOperandOffset, value: 17) // __nrUser
+        }
+
+        // Fresh same-length PlayerPrefs keys avoid stale values from a prior
+        // prepared variant overriding the controller's selected defaults.
+        let token = randomToken()
+        replaceASCII(&out, at: dltStStringOffset, length: 6, with: "b" + String(token.prefix(5)))
+        replaceASCII(&out, at: dltAimStringOffset, length: 7, with: "a" + String(token.prefix(6)))
+        replaceASCII(&out, at: dltTabStringOffset, length: 7, with: "t" + String(token.prefix(6)))
+        replaceASCII(&out, at: dltSilStringOffset, length: 7, with: "s" + String(token.prefix(6)))
+        replaceASCII(&out, at: dltNmStringOffset, length: 6, with: "n" + String(token.prefix(5)))
+
+        guard out.count == expectedSize else { throw ConfiguratorError.invalidOutputSize(out.count) }
+        return out
+    }
+
+    private static func randomToken() -> String {
+        let raw = UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
+        return String(raw.prefix(6))
+    }
+
+    private static func replaceASCII(_ data: inout Data, at offset: Int, length: Int, with value: String) {
+        let bytes = Array(value.utf8)
+        guard bytes.count == length, offset >= 0, offset + length <= data.count else { return }
+        for i in 0..<length {
+            data[offset + i] = bytes[i]
+        }
+    }
+
+    private static func writeInt32(_ data: inout Data, at offset: Int, value: Int) {
+        let raw = UInt32(bitPattern: Int32(value))
+        data[offset] = UInt8(truncatingIfNeeded: raw)
+        data[offset + 1] = UInt8(truncatingIfNeeded: raw >> 8)
+        data[offset + 2] = UInt8(truncatingIfNeeded: raw >> 16)
+        data[offset + 3] = UInt8(truncatingIfNeeded: raw >> 24)
+    }
+
+    private static func sha256(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private enum ConfiguratorError: LocalizedError {
+        case invalidSize(Int)
+        case invalidSourceHash
+        case invalidOutputSize(Int)
+
+        var errorDescription: String? {
+            switch self {
+            case .invalidSize(let size):
+                return "Patch source có size không đúng: \(size) bytes."
+            case .invalidSourceHash:
+                return "Patch source không đúng SHA-256 đã đăng ký."
+            case .invalidOutputSize(let size):
+                return "Patch sau cấu hình bị thay đổi size: \(size) bytes."
+            }
+        }
+    }
+}
 
 private struct ShareSheet: UIViewControllerRepresentable {
     let items: [Any]
@@ -977,8 +891,6 @@ private struct ShareSheet: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
-// MARK: - System UI sounds
-
 enum BeuSound {
     private static var players: [String: AVAudioPlayer] = [:]
     private static var sessionReady = false
@@ -986,7 +898,6 @@ enum BeuSound {
     private static func ensureSession() {
         guard !sessionReady else { return }
         sessionReady = true
-
         let session = AVAudioSession.sharedInstance()
         try? session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])
         try? session.setActive(true, options: [])
@@ -994,20 +905,10 @@ enum BeuSound {
 
     private static func player(named name: String) -> AVAudioPlayer? {
         ensureSession()
-
-        if let existing = players[name] {
-            return existing
-        }
-
+        if let existing = players[name] { return existing }
         guard let url = Bundle.main.url(forResource: name, withExtension: "wav")
-                ?? Bundle.main.url(forResource: name, withExtension: "caf") else {
-            return nil
-        }
-
-        guard let player = try? AVAudioPlayer(contentsOf: url) else {
-            return nil
-        }
-
+                ?? Bundle.main.url(forResource: name, withExtension: "caf") else { return nil }
+        guard let player = try? AVAudioPlayer(contentsOf: url) else { return nil }
         player.prepareToPlay()
         player.volume = 1.0
         players[name] = player
@@ -1028,15 +929,11 @@ enum BeuSound {
     static func toggle() { playFile("ui_unclick") }
 
     static func success() {
-        DispatchQueue.main.async {
-            AudioServicesPlaySystemSound(1111)
-        }
+        DispatchQueue.main.async { AudioServicesPlaySystemSound(1111) }
     }
 
     static func error() {
-        DispatchQueue.main.async {
-            AudioServicesPlaySystemSound(1073)
-        }
+        DispatchQueue.main.async { AudioServicesPlaySystemSound(1073) }
     }
 
     static func click() { glass() }
