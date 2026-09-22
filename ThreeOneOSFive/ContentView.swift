@@ -825,30 +825,8 @@ private enum AssemblyPatchConfigurator {
             writeInt32(&out, at: noRecoilOperandOffset, value: 17) // __nrUser
         }
 
-        // Fresh same-length PlayerPrefs keys avoid stale values from a prior
-        // prepared variant overriding the controller's selected defaults.
-        let token = randomToken()
-        replaceASCII(&out, at: dltStStringOffset, length: 6, with: "b" + String(token.prefix(5)))
-        replaceASCII(&out, at: dltAimStringOffset, length: 7, with: "a" + String(token.prefix(6)))
-        replaceASCII(&out, at: dltTabStringOffset, length: 7, with: "t" + String(token.prefix(6)))
-        replaceASCII(&out, at: dltSilStringOffset, length: 7, with: "s" + String(token.prefix(6)))
-        replaceASCII(&out, at: dltNmStringOffset, length: 6, with: "n" + String(token.prefix(5)))
-
         guard out.count == expectedSize else { throw ConfiguratorError.invalidOutputSize(out.count) }
         return out
-    }
-
-    private static func randomToken() -> String {
-        let raw = UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
-        return String(raw.prefix(6))
-    }
-
-    private static func replaceASCII(_ data: inout Data, at offset: Int, length: Int, with value: String) {
-        let bytes = Array(value.utf8)
-        guard bytes.count == length, offset >= 0, offset + length <= data.count else { return }
-        for i in 0..<length {
-            data[offset + i] = bytes[i]
-        }
     }
 
     private static func writeInt32(_ data: inout Data, at offset: Int, value: Int) {
