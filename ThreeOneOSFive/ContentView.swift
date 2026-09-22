@@ -42,8 +42,7 @@ struct ContentView: View {
 }
 
 private struct AssemblyControllerView: View {
-    // Persist the controller selections. These selections are consumed by
-    // PREPARE FILES, which now configures the actual Assembly patch bytes.
+    // Persist controller selections so the control panel can be reopened without losing state.
     @AppStorage("assembly.resetGuest") private var resetGuest = false
 
     @AppStorage("assembly.feature.aimBot") private var aimBot = false
@@ -63,11 +62,11 @@ private struct AssemblyControllerView: View {
 
     @State private var packageState: PackageState = .checking
     @State private var packageInfo = PackageInfo.empty
-    @State private var prepared = false
-    @State private var preparing = false
-    @State private var exporting = false
-    @State private var exportURL: URL?
+    @EnvironmentObject private var appState: AppState
+    @State private var injected = false
+    @State private var injecting = false
     @State private var statusText = "Đang kiểm tra bộ file..."
+    @State private var liveSyncWorkItem: DispatchWorkItem?
     @State private var showDetails = false
 
     private let targetBundle = "com.dts.freefireth"
@@ -87,17 +86,7 @@ private struct AssemblyControllerView: View {
             statusCard
         }
         .onAppear { loadPackageInfo() }
-        .sheet(isPresented: Binding(
-            get: { exportURL != nil },
-            set: { presented in
-                if !presented { exportURL = nil }
             }
-        )) {
-            if let url = exportURL {
-                ShareSheet(items: [url])
-            }
-        }
-    }
 
     private var overviewCard: some View {
         controllerCard {
@@ -219,7 +208,7 @@ private struct AssemblyControllerView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         detailLine(title: "PATCH SIZE", value: "\(packageInfo.patchBytes.formatted()) bytes")
                         detailLine(title: "SOURCE SHA256", value: packageInfo.patchSHA256.isEmpty ? "—" : packageInfo.patchSHA256)
-                        detailLine(title: "PATCH AFTER PREPARE", value: packageInfo.configuredSHA256.isEmpty ? "—" : packageInfo.configuredSHA256)
+                        detailLine(title: "PATCH AFTER INJECT", value: packageInfo.configuredSHA256.isEmpty ? "—" : packageInfo.configuredSHA256)
                     }
                     .padding(.top, 1)
                 }
@@ -244,8 +233,8 @@ private struct AssemblyControllerView: View {
 
                 VStack(spacing: 0) {
                     featureSectionTitle("AIM")
-                    toggleRow(title: "Aim Bot", subtitle: "Bit 8192 trong dlt_st", isOn: $aimBot)
-                    toggleRow(title: "Aim Silent", subtitle: "Player.__silentOn", isOn: $aimSilent)
+                    toggleRow(title: "Aim Bot", subtitle: "Bit 8192 trong dlt_st", isOn: liveBinding($aimBot))
+                    toggleRow(title: "Aim Silent", subtitle: "Player.__silentOn", isOn: liveBinding($aimSilent))
 
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 2) {
@@ -264,21 +253,25 @@ private struct AssemblyControllerView: View {
                         }
                         .pickerStyle(.segmented)
                         .frame(maxWidth: 180)
+                        .onChange(of: aimMode) { _ in
+                            scheduleLiveSync()
+                            BeuSound.toggle()
+                        }
                     }
                     .padding(.vertical, 8)
 
                     featureSectionTitle("ESP")
-                    toggleRow(title: "ESP Line", subtitle: "Bit 2 trong dlt_st", isOn: $espLine)
-                    toggleRow(title: "ESP Box", subtitle: "Bit 1 trong dlt_st", isOn: $espBox)
-                    toggleRow(title: "Health Bar", subtitle: "Bit 512 trong dlt_st", isOn: $healthBar)
-                    toggleRow(title: "ESP Distance", subtitle: "Bit 32768 trong dlt_st", isOn: $espDistance)
-                    toggleRow(title: "ESP Name", subtitle: "Player.__espName", isOn: $espName)
+                    toggleRow(title: "ESP Line", subtitle: "Bit 2 trong dlt_st", isOn: liveBinding($espLine))
+                    toggleRow(title: "ESP Box", subtitle: "Bit 1 trong dlt_st", isOn: liveBinding($espBox))
+                    toggleRow(title: "Health Bar", subtitle: "Bit 512 trong dlt_st", isOn: liveBinding($healthBar))
+                    toggleRow(title: "ESP Distance", subtitle: "Bit 32768 trong dlt_st", isOn: liveBinding($espDistance))
+                    toggleRow(title: "ESP Name", subtitle: "Player.__espName", isOn: liveBinding($espName))
 
                     featureSectionTitle("SPEED / COMBAT")
-                    toggleRow(title: "No Recoil", subtitle: "Bit 1024 + __nrUser", isOn: $noRecoil)
-                    toggleRow(title: "Run Speed", subtitle: "Bit 16384 → __speedMul", isOn: $runSpeed)
-                    toggleRow(title: "Sky Speed", subtitle: "Bit 65536 → __skyMul", isOn: $skySpeed)
-                    toggleRow(title: "Heal Fast", subtitle: "Bit 131072 → __healMul", isOn: $healFast)
+                    toggleRow(title: "No Recoil", subtitle: "Bit 1024 + __nrUser", isOn: liveBinding($noRecoil))
+                    toggleRow(title: "Run Speed", subtitle: "Bit 16384 → __speedMul", isOn: liveBinding($runSpeed))
+                    toggleRow(title: "Sky Speed", subtitle: "Bit 65536 → __skyMul", isOn: liveBinding($skySpeed))
+                    toggleRow(title: "Heal Fast", subtitle: "Bit 131072 → __healMul", isOn: liveBinding($healFast))
                 }
             }
         }
@@ -291,7 +284,7 @@ private struct AssemblyControllerView: View {
                 toggleRow(
                     title: "Reset Guest",
                     subtitle: "localConfig.json • mặc định OFF",
-                    isOn: $resetGuest
+                    isOn: resetBinding($resetGuest)
                 )
                 Text("testCodePatch luôn được giữ TRUE và không hiển thị thành toggle.")
                     .font(.system(size: 10.5, weight: .medium, design: .rounded))
@@ -303,26 +296,20 @@ private struct AssemblyControllerView: View {
     private var actionsCard: some View {
         controllerCard {
             VStack(spacing: 10) {
-                HStack(spacing: 10) {
-                    Button(action: preparePackage) {
-                        actionLabel(
-                            title: preparing ? "PREPARING..." : "PREPARE FILES",
-                            icon: "slider.horizontal.3"
-                        )
-                    }
-                    .disabled(preparing || exporting || packageState != .ready)
-
-                    Button(action: exportPackage) {
-                        actionLabel(
-                            title: exporting ? "EXPORTING..." : "EXPORT PACKAGE",
-                            icon: "square.and.arrow.up"
-                        )
-                    }
-                    .disabled(preparing || exporting || packageState != .ready)
+                Button(action: injectPackage) {
+                    actionLabel(
+                        title: injecting ? "INJECTING..." : "INJECT",
+                        icon: injecting ? "arrow.triangle.2.circlepath" : "bolt.fill"
+                    )
                 }
+                .disabled(injecting || packageState != .ready || !appState.exploitStatus.isSuccess)
 
-                if prepared {
-                    Text("Đã tạo patch đã cấu hình trong PreparedAssembly/.")
+                if !appState.exploitStatus.isSuccess {
+                    Text("Cần quyền truy cập target trước khi Inject.")
+                        .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.38))
+                } else if injected {
+                    Text("INJECTED • realtime state đang được đồng bộ.")
                         .font(.system(size: 10.5, weight: .semibold, design: .rounded))
                         .foregroundStyle(pinkAccent.opacity(0.92))
                 }
@@ -378,7 +365,7 @@ private struct AssemblyControllerView: View {
     private var statusTitle: String {
         switch packageState {
         case .checking: return "CHECKING"
-        case .ready: return prepared ? "CONFIGURED" : "READY"
+        case .ready: return injected ? "INJECTED" : "READY"
         case .failed: return "ERROR"
         }
     }
@@ -386,7 +373,7 @@ private struct AssemblyControllerView: View {
     private var statusIcon: String {
         switch packageState {
         case .checking: return "hourglass"
-        case .ready: return prepared ? "checkmark.circle.fill" : "checkmark.seal.fill"
+        case .ready: return injected ? "checkmark.circle.fill" : "checkmark.seal.fill"
         case .failed: return "xmark.octagon.fill"
         }
     }
@@ -394,7 +381,7 @@ private struct AssemblyControllerView: View {
     private var statusColor: Color {
         switch packageState {
         case .checking: return .white.opacity(0.65)
-        case .ready: return prepared ? pinkAccent : .green
+        case .ready: return injected ? pinkAccent : .green
         case .failed: return .red
         }
     }
@@ -414,7 +401,7 @@ private struct AssemblyControllerView: View {
     private func loadPackageInfo() {
         packageState = .checking
         statusText = "Đang kiểm tra bộ file..."
-        prepared = false
+        injected = false
 
         DispatchQueue.global(qos: .userInitiated).async {
             do {
@@ -430,6 +417,8 @@ private struct AssemblyControllerView: View {
                     && hash == expectedPatchSHA256
                     && !configData.isEmpty
 
+                let installed = Self.targetHasLiveResources(targetBundle: targetBundle)
+
                 DispatchQueue.main.async {
                     packageInfo = PackageInfo(
                         patchBytes: patchData.count,
@@ -438,8 +427,9 @@ private struct AssemblyControllerView: View {
                         patchDetail: "\(patchData.count.formatted()) bytes  •  SHA256 \(Self.shortHash(hash))"
                     )
                     packageState = ok ? .ready : .failed
+                    injected = installed
                     statusText = ok
-                        ? "Bản gốc khớp hash/size đã đăng ký."
+                        ? (installed ? "Bản gốc hợp lệ • target đã có resource live." : "Bản gốc khớp hash/size đã đăng ký.")
                         : "Bản gốc không khớp hash/size đã đăng ký."
                 }
             } catch {
@@ -452,15 +442,124 @@ private struct AssemblyControllerView: View {
         }
     }
 
-    private func preparePackage() {
-        guard packageState == .ready, !preparing else { return }
+    private func verifyTargetInstallation() {
+        let installed = Self.targetHasLiveResources(targetBundle: targetBundle)
+        injected = installed
+        if installed {
+            statusText = "Target đã có patch/config/state đang được controller quản lý."
+        }
+    }
 
-        preparing = true
-        prepared = false
-        statusText = "Đang map toggle vào Assembly-CSharp-patch.bytes..."
+    private static func targetHasLiveResources(targetBundle: String) -> Bool {
+        guard let rootPath = ContainerStore.resolveAppContainerPath(bundleID: targetBundle),
+              ContainerStore.isApplicationContainerPath(rootPath) else {
+            return false
+        }
+
+        let documents = URL(fileURLWithPath: rootPath, isDirectory: true)
+            .appendingPathComponent("Documents", isDirectory: true)
+        let patch = documents.appendingPathComponent("Assembly-CSharp-patch.bytes")
+        let config = documents.appendingPathComponent("localConfig.json")
+        let state = documents.appendingPathComponent("BEUControllerState.json")
+        return FileManager.default.fileExists(atPath: patch.path)
+            && FileManager.default.fileExists(atPath: config.path)
+            && FileManager.default.fileExists(atPath: state.path)
+    }
+
+    private func injectPackage() {
+        guard packageState == .ready, !injecting, appState.exploitStatus.isSuccess else { return }
+
+        injecting = true
+        injected = false
+        statusText = "Đang cấu hình patch + ghi đè/thêm resource vào target..."
         BeuSound.glass()
 
-        let settings = AssemblyPatchSettings(
+        let settings = currentSettings
+        let reset = resetGuest
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                guard let patchURL = Bundle.main.url(forResource: "Assembly-CSharp-patch", withExtension: "bytes") else {
+                    throw ControllerError.missingPatch
+                }
+
+                let source = try Data(contentsOf: patchURL)
+                let configured = try AssemblyPatchConfigurator.configure(source: source, settings: settings)
+                let configuredHash = Self.sha256(configured)
+                let liveState = ControllerLiveState(settings: settings)
+                let stateData = try Self.encodeJSON(liveState)
+                let configData = Data("{\"testCodePatch\":true,\"resetGuest\":\(reset ? "true" : "false")}\n".utf8)
+
+                let project = PatchProject(
+                    name: "BEU Live Controller",
+                    bundleIdentifiers: [targetBundle],
+                    rules: [
+                        PatchRule(
+                            bundleID: targetBundle,
+                            relativePath: "Documents/Assembly-CSharp-patch.bytes",
+                            replacementFilename: "Assembly-CSharp-patch.bytes",
+                            replacementData: configured
+                        ),
+                        PatchRule(
+                            bundleID: targetBundle,
+                            relativePath: "Documents/localConfig.json",
+                            replacementFilename: "localConfig.json",
+                            replacementData: configData
+                        ),
+                        PatchRule(
+                            bundleID: targetBundle,
+                            relativePath: "Documents/BEUControllerState.json",
+                            replacementFilename: "BEUControllerState.json",
+                            replacementData: stateData
+                        )
+                    ]
+                )
+
+                _ = try DevicePatchService.apply(project: project)
+
+                guard let rootPath = ContainerStore.resolveAppContainerPath(bundleID: targetBundle),
+                      ContainerStore.isApplicationContainerPath(rootPath) else {
+                    throw ControllerError.targetUnavailable
+                }
+
+                let documents = URL(fileURLWithPath: rootPath, isDirectory: true)
+                    .appendingPathComponent("Documents", isDirectory: true)
+                let patchOut = documents.appendingPathComponent("Assembly-CSharp-patch.bytes")
+                let configOut = documents.appendingPathComponent("localConfig.json")
+                let stateOut = documents.appendingPathComponent("BEUControllerState.json")
+
+                guard FileManager.default.fileExists(atPath: patchOut.path),
+                      FileManager.default.fileExists(atPath: configOut.path),
+                      FileManager.default.fileExists(atPath: stateOut.path) else {
+                    throw ControllerError.injectVerificationFailed
+                }
+
+                let installedPatch = try Data(contentsOf: patchOut)
+                guard Self.sha256(installedPatch) == configuredHash else {
+                    throw ControllerError.injectVerificationFailed
+                }
+
+                DispatchQueue.main.async {
+                    packageInfo.configuredSHA256 = configuredHash
+                    injected = true
+                    injecting = false
+                    statusText = "INJECT thành công. Patch/config/state đã được ghi vào target."
+                    BeuSound.success()
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    injecting = false
+                    injected = false
+                    packageState = .failed
+                    statusText = "Inject thất bại: \(error.localizedDescription)"
+                    BeuSound.error()
+                }
+            }
+        }
+    }
+
+    private var currentSettings: AssemblyPatchSettings {
+        AssemblyPatchSettings(
             aimBot: aimBot,
             aimSilent: aimSilent,
             aimMode: aimMode,
@@ -474,111 +573,50 @@ private struct AssemblyControllerView: View {
             skySpeed: skySpeed,
             healFast: healFast
         )
-        let reset = resetGuest
-
-        DispatchQueue.global(qos: .userInitiated).async {
-            do {
-                guard let patchURL = Bundle.main.url(forResource: "Assembly-CSharp-patch", withExtension: "bytes") else {
-                    throw ControllerError.missingPatch
-                }
-
-                let source = try Data(contentsOf: patchURL)
-                let configured = try AssemblyPatchConfigurator.configure(source: source, settings: settings)
-                let configuredHash = Self.sha256(configured)
-
-                let root = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-                let output = root.appendingPathComponent("PreparedAssembly", isDirectory: true)
-                try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
-
-                let patchOut = output.appendingPathComponent("Assembly-CSharp-patch.bytes")
-                let configOut = output.appendingPathComponent("localConfig.json")
-                let manifestOut = output.appendingPathComponent("controllerFeatures.json")
-
-                try configured.write(to: patchOut, options: .atomic)
-
-                let configJSON = "{\"testCodePatch\":true,\"resetGuest\":\(reset ? "true" : "false")}\n"
-                try Data(configJSON.utf8).write(to: configOut, options: .atomic)
-
-                let manifest = ControllerManifest(
-                    sourceSHA256: Self.sha256(source),
-                    configuredSHA256: configuredHash,
-                    settings: settings,
-                    resetGuest: reset
-                )
-                let encoder = JSONEncoder()
-                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-                try encoder.encode(manifest).write(to: manifestOut, options: .atomic)
-
-                DispatchQueue.main.async {
-                    packageInfo.configuredSHA256 = configuredHash
-                    prepared = true
-                    preparing = false
-                    statusText = "Đã tạo bản patch theo đúng trạng thái các nút."
-                    BeuSound.success()
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    preparing = false
-                    prepared = false
-                    packageState = .failed
-                    statusText = "Prepare thất bại: \(error.localizedDescription)"
-                    BeuSound.error()
-                }
-            }
-        }
     }
 
-    private func exportPackage() {
-        guard packageState == .ready, !exporting else { return }
+    private func scheduleLiveSync() {
+        liveSyncWorkItem?.cancel()
+        guard injected else { return }
 
-        // Export is deliberately based on the prepared/configured files.
-        if !prepared {
-            preparePackage()
-            statusText = "Đã nhận yêu cầu. Prepare trước, sau đó Export lại."
+        let work = DispatchWorkItem { [settings = currentSettings] in
+            pushLiveState(settings)
+        }
+        liveSyncWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: work)
+    }
+
+    private func pushLiveState(_ settings: AssemblyPatchSettings) {
+        guard let rootPath = ContainerStore.resolveAppContainerPath(bundleID: targetBundle),
+              ContainerStore.isApplicationContainerPath(rootPath) else {
             return
         }
 
-        exporting = true
-        statusText = "Đang đóng gói bản patch đã cấu hình..."
-        BeuSound.soft()
+        let documents = URL(fileURLWithPath: rootPath, isDirectory: true)
+            .appendingPathComponent("Documents", isDirectory: true)
+        let stateURL = documents.appendingPathComponent("BEUControllerState.json")
 
-        DispatchQueue.global(qos: .userInitiated).async {
-            do {
-                let root = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-                let preparedDir = root.appendingPathComponent("PreparedAssembly", isDirectory: true)
-                let patch = preparedDir.appendingPathComponent("Assembly-CSharp-patch.bytes")
-                let config = preparedDir.appendingPathComponent("localConfig.json")
-                let manifest = preparedDir.appendingPathComponent("controllerFeatures.json")
-
-                guard FileManager.default.fileExists(atPath: patch.path),
-                      FileManager.default.fileExists(atPath: config.path) else {
-                    throw ControllerError.notPrepared
-                }
-
-                let zipURL = root.appendingPathComponent("BEU-Assembly-Package.zip")
-                try? FileManager.default.removeItem(at: zipURL)
-
-                var items = [patch, config]
-                if FileManager.default.fileExists(atPath: manifest.path) {
-                    items.append(manifest)
-                }
-
-                _ = try ZIPArchiveWriter.write(items: items, to: zipURL)
-
-                DispatchQueue.main.async {
-                    exporting = false
-                    exportURL = zipURL
-                    statusText = "Đã export bản patch đã cấu hình."
-                    BeuSound.success()
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    exporting = false
-                    statusText = "Export thất bại: \(error.localizedDescription)"
-                    BeuSound.error()
-                }
+        do {
+            try FileManager.default.createDirectory(at: documents, withIntermediateDirectories: true)
+            let data = try Self.encodeJSON(ControllerLiveState(settings: settings))
+            let tempURL = documents.appendingPathComponent(".BEUControllerState-\(UUID().uuidString).tmp")
+            try data.write(to: tempURL, options: .atomic)
+            if FileManager.default.fileExists(atPath: stateURL.path) {
+                _ = try FileManager.default.replaceItemAt(
+                    stateURL, withItemAt: tempURL, backupItemName: nil, options: .usingNewMetadataOnly
+                )
+            } else {
+                try FileManager.default.moveItem(at: tempURL, to: stateURL)
             }
+        } catch {
+            // The next toggle/inject will retry. Keep UI responsive.
         }
+    }
+
+    private static func encodeJSON<T: Encodable>(_ value: T) throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        return try encoder.encode(value)
     }
 
     private func controllerCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
@@ -619,6 +657,53 @@ private struct AssemblyControllerView: View {
             Spacer()
         }
         .padding(.top, 7)
+    }
+
+    private func resetBinding(_ binding: Binding<Bool>) -> Binding<Bool> {
+        Binding(
+            get: { binding.wrappedValue },
+            set: { value in
+                binding.wrappedValue = value
+                if injected { pushLocalConfig(value) }
+                BeuSound.toggle()
+            }
+        )
+    }
+
+    private func pushLocalConfig(_ reset: Bool) {
+        guard let rootPath = ContainerStore.resolveAppContainerPath(bundleID: targetBundle),
+              ContainerStore.isApplicationContainerPath(rootPath) else { return }
+
+        let documents = URL(fileURLWithPath: rootPath, isDirectory: true)
+            .appendingPathComponent("Documents", isDirectory: true)
+        let configURL = documents.appendingPathComponent("localConfig.json")
+        let data = Data("{\"testCodePatch\":true,\"resetGuest\":\(reset ? "true" : "false")}\n".utf8)
+
+        do {
+            try FileManager.default.createDirectory(at: documents, withIntermediateDirectories: true)
+            let tempURL = documents.appendingPathComponent(".localConfig-\(UUID().uuidString).tmp")
+            try data.write(to: tempURL, options: .atomic)
+            if FileManager.default.fileExists(atPath: configURL.path) {
+                _ = try FileManager.default.replaceItemAt(
+                    configURL, withItemAt: tempURL, backupItemName: nil, options: .usingNewMetadataOnly
+                )
+            } else {
+                try FileManager.default.moveItem(at: tempURL, to: configURL)
+            }
+        } catch {
+            statusText = "Không đồng bộ được localConfig.json."
+        }
+    }
+
+    private func liveBinding(_ binding: Binding<Bool>) -> Binding<Bool> {
+        Binding(
+            get: { binding.wrappedValue },
+            set: { value in
+                binding.wrappedValue = value
+                scheduleLiveSync()
+                BeuSound.toggle()
+            }
+        )
     }
 
     private func toggleRow(title: String, subtitle: String, isOn: Binding<Bool>) -> some View {
@@ -710,6 +795,8 @@ private struct AssemblyControllerView: View {
     private enum ControllerError: LocalizedError {
         case missingPatch
         case notPrepared
+        case targetUnavailable
+        case injectVerificationFailed
 
         var errorDescription: String? {
             switch self {
@@ -717,6 +804,10 @@ private struct AssemblyControllerView: View {
                 return "Không tìm thấy Assembly-CSharp-patch.bytes trong bundle."
             case .notPrepared:
                 return "Chưa có patch đã cấu hình."
+            case .targetUnavailable:
+                return "Không tìm thấy container của target."
+            case .injectVerificationFailed:
+                return "Inject xong nhưng không xác minh được resource trong target."
             }
         }
     }
@@ -737,6 +828,32 @@ private struct AssemblyPatchSettings: Codable {
     let runSpeed: Bool
     let skySpeed: Bool
     let healFast: Bool
+}
+
+private struct ControllerLiveState: Codable {
+    let dlt_st: Int
+    let dlt_aim: Int
+    let dlt_sil: Int
+    let dlt_nm: Int
+
+    init(settings: AssemblyPatchSettings) {
+        dlt_st = Self.mask(settings)
+        dlt_aim = min(max(settings.aimMode, 0), 2)
+        dlt_sil = settings.aimSilent ? 1 : 0
+        dlt_nm = settings.espName ? 1 : 0
+    }
+
+    private static func mask(_ s: AssemblyPatchSettings) -> Int {
+        (s.espLine ? 2 : 0)
+        | (s.espBox ? 1 : 0)
+        | (s.healthBar ? 512 : 0)
+        | (s.noRecoil ? 1024 : 0)
+        | (s.aimBot ? 8192 : 0)
+        | (s.runSpeed ? 16384 : 0)
+        | (s.espDistance ? 32768 : 0)
+        | (s.skySpeed ? 65536 : 0)
+        | (s.healFast ? 131072 : 0)
+    }
 }
 
 private struct ControllerManifest: Codable {
@@ -763,12 +880,12 @@ private enum AssemblyPatchConfigurator {
     private static let espNameDefaultOpOffset = 13_511
     private static let espNameDefaultOperandOffset = 13_515
 
-    // String table payload offsets; replacements keep identical byte lengths.
-    private static let dltStStringOffset = 37_750
-    private static let dltAimStringOffset = 37_757
-    private static let dltTabStringOffset = 37_765
-    private static let dltSilStringOffset = 37_773
-    private static let dltNmStringOffset = 37_781
+    // Headless-live mode: force method 4 to reload PlayerPrefs every OnGUI
+    // tick, then return before the old in-game control window is drawn.
+    private static let headlessGateOpOffset = 13_327
+    private static let headlessGateOperandOffset = 13_331
+    private static let headlessReturnOpOffset = 13_551
+    private static let headlessReturnOperandOffset = 13_555
 
     // Actual dlt_st masks proven from the patch's UI/bit-test logic.
     private static let maskESPLine = 2
@@ -825,8 +942,31 @@ private enum AssemblyPatchConfigurator {
             writeInt32(&out, at: noRecoilOperandOffset, value: 17) // __nrUser
         }
 
+        // Method 4 originally checks __pLoaded and only reads PlayerPrefs once.
+        // Replace that gate with `false`, so dlt_st/dlt_aim/dlt_sil/dlt_nm are
+        // refreshed from PlayerPrefs on every OnGUI call. Then return before the
+        // legacy touch/GUI menu code starts.
+        guard readInt32(source, at: headlessGateOpOffset) == 144,
+              readInt32(source, at: headlessGateOperandOffset) == 34,
+              readInt32(source, at: headlessReturnOpOffset) == 20,
+              readInt32(source, at: headlessReturnOperandOffset) == 7 else {
+            throw ConfiguratorError.invalidLayout
+        }
+        writeInt32(&out, at: headlessGateOpOffset, value: 180)
+        writeInt32(&out, at: headlessGateOperandOffset, value: 0)
+        writeInt32(&out, at: headlessReturnOpOffset, value: 136)
+        writeInt32(&out, at: headlessReturnOperandOffset, value: 0)
+
         guard out.count == expectedSize else { throw ConfiguratorError.invalidOutputSize(out.count) }
         return out
+    }
+
+    private static func readInt32(_ data: Data, at offset: Int) -> Int {
+        let b0 = UInt32(data[offset])
+        let b1 = UInt32(data[offset + 1]) << 8
+        let b2 = UInt32(data[offset + 2]) << 16
+        let b3 = UInt32(data[offset + 3]) << 24
+        return Int(Int32(bitPattern: b0 | b1 | b2 | b3))
     }
 
     private static func writeInt32(_ data: inout Data, at offset: Int, value: Int) {
@@ -845,6 +985,7 @@ private enum AssemblyPatchConfigurator {
         case invalidSize(Int)
         case invalidSourceHash
         case invalidOutputSize(Int)
+        case invalidLayout
 
         var errorDescription: String? {
             switch self {
@@ -854,19 +995,11 @@ private enum AssemblyPatchConfigurator {
                 return "Patch source không đúng SHA-256 đã đăng ký."
             case .invalidOutputSize(let size):
                 return "Patch sau cấu hình bị thay đổi size: \(size) bytes."
+            case .invalidLayout:
+                return "Patch layout không khớp với base patch đã xác nhận."
             }
         }
     }
-}
-
-private struct ShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 enum BeuSound {
