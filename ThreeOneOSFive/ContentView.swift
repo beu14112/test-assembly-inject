@@ -1,4 +1,6 @@
 import SwiftUI
+import AudioToolbox
+import AVFoundation
 
 // MARK: - Post-login root
 //
@@ -107,4 +109,63 @@ struct ContentView: View {
         )
         .shadow(color: .black.opacity(0.24), radius: 18, x: 0, y: 10)
     }
+}
+
+
+// MARK: - System UI sounds
+
+enum BeuSound {
+    private static var players: [String: AVAudioPlayer] = [:]
+    private static var sessionReady = false
+
+    private static func ensureSession() {
+        guard !sessionReady else { return }
+        sessionReady = true
+        let session = AVAudioSession.sharedInstance()
+        try? session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])
+        try? session.setActive(true, options: [])
+    }
+
+    private static func player(named name: String) -> AVAudioPlayer? {
+        ensureSession()
+        if let existing = players[name] {
+            return existing
+        }
+        guard let url = Bundle.main.url(forResource: name, withExtension: "wav")
+                ?? Bundle.main.url(forResource: name, withExtension: "caf") else {
+            return nil
+        }
+        guard let p = try? AVAudioPlayer(contentsOf: url) else { return nil }
+        p.prepareToPlay()
+        p.volume = 1.0
+        players[name] = p
+        return p
+    }
+
+    private static func playFile(_ name: String) {
+        DispatchQueue.main.async {
+            guard let p = player(named: name) else { return }
+            p.currentTime = 0
+            p.play()
+        }
+    }
+
+    static func glass() { playFile("ui_click") }
+    static func soft() { playFile("ui_unclick") }
+    static func tick() { playFile("ui_double") }
+    static func toggle() { playFile("ui_unclick") }
+
+    static func success() {
+        DispatchQueue.main.async {
+            AudioServicesPlaySystemSound(1111)
+        }
+    }
+
+    static func error() {
+        DispatchQueue.main.async {
+            AudioServicesPlaySystemSound(1073)
+        }
+    }
+
+    static func click() { glass() }
 }
