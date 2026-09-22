@@ -49,7 +49,7 @@ struct ContentView: View {
 // MARK: - Controller
 
 private struct AssemblyControllerView: View {
-    @State private var resetGuest = false
+    @AppStorage("assembly.resetGuest") private var resetGuest = false
     @State private var packageState: PackageState = .checking
     @State private var packageInfo = PackageInfo.empty
     @State private var prepared = false
