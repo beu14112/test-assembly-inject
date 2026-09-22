@@ -46,8 +46,7 @@ struct ContentView: View {
 // MARK: - Assembly controller demo
 
 private struct AssemblyControllerView: View {
-    @State private var testCodePatch = true
-    @State private var resetGuest = true
+    @State private var resetGuest = false
     @State private var prepared = false
     @State private var isPreparing = false
     @State private var statusText = "Sẵn sàng"
@@ -183,11 +182,6 @@ private struct AssemblyControllerView: View {
         controllerCard {
             VStack(alignment: .leading, spacing: 4) {
                 sectionLabel("CONFIGURATION")
-                toggleRow(
-                    title: "Test Code Patch",
-                    subtitle: "testCodePatch",
-                    isOn: $testCodePatch
-                )
                 toggleRow(
                     title: "Reset Guest",
                     subtitle: "resetGuest",
@@ -332,7 +326,6 @@ private struct AssemblyControllerView: View {
         prepared = false
         statusText = "Đang tạo bộ file..."
 
-        let enabled = testCodePatch
         let reset = resetGuest
 
         DispatchQueue.global(qos: .userInitiated).async {
@@ -345,7 +338,7 @@ private struct AssemblyControllerView: View {
                 }
 
                 let patchData = try Data(contentsOf: patchURL)
-                let payload = "{\"testCodePatch\":\(enabled ? "true" : "false"),\"resetGuest\":\(reset ? "true" : "false")}\n"
+                let payload = "{\"testCodePatch\":true,\"resetGuest\":\(reset ? "true" : "false")}\n"
                 let configData = Data(payload.utf8)
 
                 let fm = FileManager.default
