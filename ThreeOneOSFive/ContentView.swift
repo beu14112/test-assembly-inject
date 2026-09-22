@@ -302,10 +302,10 @@ private struct AssemblyControllerView: View {
                         icon: injecting ? "arrow.triangle.2.circlepath" : "bolt.fill"
                     )
                 }
-                .disabled(injecting || packageState != .ready || !appState.exploitStatus.isSuccess)
+                .disabled(injecting || packageState != .ready)
 
-                if !appState.exploitStatus.isSuccess {
-                    Text("Cần quyền truy cập target trước khi Inject.")
+                if !injected && !appState.exploitStatus.isSuccess {
+                    Text("INJECT sẽ kiểm tra quyền truy cập target khi thực thi.")
                         .font(.system(size: 10.5, weight: .medium, design: .rounded))
                         .foregroundStyle(.white.opacity(0.38))
                 } else if injected {
@@ -467,7 +467,7 @@ private struct AssemblyControllerView: View {
     }
 
     private func injectPackage() {
-        guard packageState == .ready, !injecting, appState.exploitStatus.isSuccess else { return }
+        guard packageState == .ready, !injecting else { return }
 
         injecting = true
         injected = false
