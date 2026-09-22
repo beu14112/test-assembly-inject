@@ -75,8 +75,15 @@ private struct AssemblyControllerView: View {
         .onAppear {
             loadPackageInfo()
         }
-        .sheet(item: $exportURL) { url in
-            ShareSheet(items: [url])
+        .sheet(isPresented: Binding(
+            get: { exportURL != nil },
+            set: { presented in
+                if !presented { exportURL = nil }
+            }
+        )) {
+            if let url = exportURL {
+                ShareSheet(items: [url])
+            }
         }
     }
 
@@ -435,7 +442,7 @@ private struct AssemblyControllerView: View {
             let info = PackageInfo(
                 patchBytes: patchData.count,
                 patchSHA256: hash,
-                patchDetail: "\(patchData.count.formatted()) bytes  •  SHA256 \(shortHash(hash))"
+                patchDetail: "\(patchData.count.formatted()) bytes  •  SHA256 \(Self.shortHash(hash))"
             )
 
             DispatchQueue.main.async {
