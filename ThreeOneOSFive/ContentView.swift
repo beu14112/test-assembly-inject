@@ -1,32 +1,27 @@
 import SwiftUI
 import AudioToolbox
 import AVFoundation
+import Foundation
 
-// MARK: - Post-login root
-//
-// The old Home / Settings / account / side-menu UI has been intentionally
-// removed. The license gate remains unchanged in App.swift / LicenseGateView.
-// This view is now a clean shell for the new controller workspace.
+// MARK: - Post-login controller workspace
 
 struct ContentView: View {
     var body: some View {
         ZStack {
-            // AppVideoBackground is owned by App.swift and remains untouched.
             Color.black.opacity(0.28)
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                Spacer(minLength: 24)
-
-                workspaceHeader
-
-                workspaceCard
-                    .padding(.top, 22)
-                    .padding(.horizontal, 20)
-
-                Spacer(minLength: 24)
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 18) {
+                        workspaceHeader
+                        AssemblyControllerView()
+                    }
+                    .padding(.horizontal, 18)
+                    .padding(.top, 24)
+                    .padding(.bottom, 30)
+                }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .preferredColorScheme(.dark)
@@ -39,78 +34,354 @@ struct ContentView: View {
                 .tracking(2.2)
                 .foregroundStyle(.white)
 
-            Text("NEW WORKSPACE")
+            Text("ASSEMBLY CONTROLLER")
                 .font(.system(size: 10.5, weight: .semibold, design: .rounded))
                 .tracking(2.0)
                 .foregroundStyle(.white.opacity(0.52))
         }
-        .padding(.top, 8)
+        .padding(.top, 4)
+    }
+}
+
+// MARK: - Assembly controller demo
+
+private struct AssemblyControllerView: View {
+    @State private var testCodePatch = true
+    @State private var resetGuest = true
+    @State private var prepared = false
+    @State private var isPreparing = false
+    @State private var statusText = "Sẵn sàng"
+    @State private var showDetails = false
+
+    private let targetBundle = "com.dts.freefireth"
+
+    var body: some View {
+        VStack(spacing: 14) {
+            headerCard
+            targetCard
+            filesCard
+            optionsCard
+            prepareButton
+            statusCard
+        }
     }
 
-    private var workspaceCard: some View {
-        VStack(spacing: 16) {
-            HStack(spacing: 11) {
+    private var headerCard: some View {
+        controllerCard {
+            HStack(spacing: 12) {
                 Image(systemName: "shippingbox.fill")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.92))
-                    .frame(width: 38, height: 38)
+                    .frame(width: 42, height: 42)
                     .background(
-                        RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .fill(Color.white.opacity(0.09))
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 11, style: .continuous)
-                            .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Color.white.opacity(0.11), lineWidth: 1)
                     )
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Assembly Controller")
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
 
-                    Text("Workspace mới sẵn sàng để triển khai")
+                    Text("Điều khiển bộ patch và cấu hình")
                         .font(.system(size: 11.5, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.48))
+                        .foregroundStyle(.white.opacity(0.46))
                 }
 
-                Spacer(minLength: 0)
+                Spacer()
+            }
+        }
+    }
+
+    private var targetCard: some View {
+        controllerCard {
+            VStack(alignment: .leading, spacing: 10) {
+                sectionLabel("TARGET")
+
+                HStack(spacing: 10) {
+                    Image(systemName: "gamecontroller.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.86))
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Free Fire")
+                            .font(.system(size: 14.5, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                        Text(targetBundle)
+                            .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.40))
+                    }
+
+                    Spacer()
+
+                    Text("Documents")
+                        .font(.system(size: 10.5, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.56))
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule().fill(Color.white.opacity(0.07))
+                        )
+                }
+            }
+        }
+    }
+
+    private var filesCard: some View {
+        controllerCard {
+            VStack(alignment: .leading, spacing: 10) {
+                sectionLabel("FILES")
+                fileRow(
+                    icon: "doc.zipper",
+                    name: "Assembly-CSharp-patch.bytes",
+                    detail: "39,019 bytes  •  SHA256 …6140"
+                )
+                Divider().overlay(Color.white.opacity(0.07))
+                fileRow(
+                    icon: "doc.text",
+                    name: "localConfig.json",
+                    detail: "40 bytes  •  testCodePatch / resetGuest"
+                )
+
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showDetails.toggle()
+                    }
+                } label: {
+                    HStack {
+                        Text(showDetails ? "Ẩn chi tiết" : "Xem chi tiết")
+                            .font(.system(size: 11.5, weight: .semibold, design: .rounded))
+                        Spacer()
+                        Image(systemName: showDetails ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 10, weight: .bold))
+                    }
+                    .foregroundStyle(.white.opacity(0.55))
+                }
+                .buttonStyle(.plain)
+
+                if showDetails {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Assembly SHA256")
+                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.38))
+                        Text(Self.patchSHA256)
+                            .font(.system(size: 9.5, weight: .medium, design: .monospaced))
+                            .foregroundStyle(.white.opacity(0.65))
+                            .textSelection(.enabled)
+                    }
+                    .padding(.top, 2)
+                }
+            }
+        }
+    }
+
+    private var optionsCard: some View {
+        controllerCard {
+            VStack(alignment: .leading, spacing: 4) {
+                sectionLabel("CONFIGURATION")
+                toggleRow(
+                    title: "Test Code Patch",
+                    subtitle: "testCodePatch",
+                    isOn: $testCodePatch
+                )
+                toggleRow(
+                    title: "Reset Guest",
+                    subtitle: "resetGuest",
+                    isOn: $resetGuest
+                )
+            }
+        }
+    }
+
+    private var prepareButton: some View {
+        Button {
+            preparePackage()
+        } label: {
+            HStack(spacing: 9) {
+                if isPreparing {
+                    ProgressView()
+                        .tint(.white)
+                } else {
+                    Image(systemName: prepared ? "checkmark.circle.fill" : "arrow.down.doc.fill")
+                        .font(.system(size: 15, weight: .bold))
+                }
+
+                Text(isPreparing ? "ĐANG CHUẨN BỊ" : (prepared ? "ĐÃ CHUẨN BỊ" : "PREPARE FILES"))
+                    .font(.system(size: 13.5, weight: .bold, design: .rounded))
+                    .tracking(0.5)
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 52)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color.white.opacity(prepared ? 0.16 : 0.12))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.white.opacity(0.16), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(isPreparing)
+    }
+
+    private var statusCard: some View {
+        HStack(spacing: 9) {
+            Circle()
+                .fill(prepared ? Color.green.opacity(0.92) : Color.white.opacity(0.35))
+                .frame(width: 8, height: 8)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(statusText)
+                    .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.84))
+                Text("Bản demo chỉ chuẩn bị bộ file trong sandbox của app.")
+                    .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.36))
             }
 
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.black.opacity(0.22))
-                .overlay(
-                    VStack(spacing: 7) {
-                        Image(systemName: "square.stack.3d.up.fill")
-                            .font(.system(size: 24, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.72))
-
-                        Text("Khu vực mới")
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.86))
-
-                        Text("Các chức năng cũ đã được gỡ khỏi màn hình sau đăng nhập.")
-                            .font(.system(size: 11, weight: .regular, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.42))
-                            .multilineTextAlignment(.center)
-                            .lineSpacing(2)
-                            .padding(.horizontal, 20)
-                    }
-                )
-                .frame(height: 190)
+            Spacer()
         }
-        .padding(16)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
         .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color.black.opacity(0.46))
+            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                .fill(Color.black.opacity(0.30))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
+            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
+    }
+
+    private func controllerCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            content()
+        }
+        .padding(15)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color.black.opacity(0.47))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.white.opacity(0.10), lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.24), radius: 18, x: 0, y: 10)
     }
-}
 
+    private func sectionLabel(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 9.5, weight: .bold, design: .rounded))
+            .tracking(1.2)
+            .foregroundStyle(.white.opacity(0.38))
+    }
+
+    private func fileRow(icon: String, name: String, detail: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.76))
+                .frame(width: 30, height: 30)
+                .background(
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .fill(Color.white.opacity(0.07))
+                )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name)
+                    .font(.system(size: 11.5, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.88))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                Text(detail)
+                    .font(.system(size: 9.5, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.36))
+            }
+
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func toggleRow(title: String, subtitle: String, isOn: Binding<Bool>) -> some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.86))
+                Text(subtitle)
+                    .font(.system(size: 9.5, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.36))
+            }
+
+            Spacer()
+
+            Toggle("", isOn: isOn)
+                .labelsHidden()
+                .tint(Color.white.opacity(0.82))
+        }
+        .padding(.vertical, 7)
+    }
+
+    private func preparePackage() {
+        isPreparing = true
+        prepared = false
+        statusText = "Đang tạo bộ file..."
+
+        let enabled = testCodePatch
+        let reset = resetGuest
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                guard let patchURL = Bundle.main.url(
+                    forResource: "Assembly-CSharp-patch",
+                    withExtension: "bytes"
+                ) else {
+                    throw ControllerError.missingPatch
+                }
+
+                let patchData = try Data(contentsOf: patchURL)
+                let payload = "{\"testCodePatch\":\(enabled ? "true" : "false"),\"resetGuest\":\(reset ? "true" : "false")}\n"
+                let configData = Data(payload.utf8)
+
+                let fm = FileManager.default
+                let output = fm.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                    .appendingPathComponent("PreparedAssembly", isDirectory: true)
+                try fm.createDirectory(at: output, withIntermediateDirectories: true)
+                try patchData.write(to: output.appendingPathComponent("Assembly-CSharp-patch.bytes"), options: .atomic)
+                try configData.write(to: output.appendingPathComponent("localConfig.json"), options: .atomic)
+
+                DispatchQueue.main.async {
+                    prepared = true
+                    isPreparing = false
+                    statusText = "Bộ file đã được chuẩn bị"
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    prepared = false
+                    isPreparing = false
+                    statusText = "Không thể chuẩn bị: \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+
+    private enum ControllerError: LocalizedError {
+        case missingPatch
+        var errorDescription: String? {
+            switch self {
+            case .missingPatch:
+                return "Không tìm thấy Assembly-CSharp-patch.bytes trong bundle."
+            }
+        }
+    }
+
+    private static let patchSHA256 = "17a61bd1c7b6bf9be9995458ae58e5a9f04f00816af9b05366fb65588a5fb1b7"
+}
 
 // MARK: - System UI sounds
 
@@ -135,18 +406,18 @@ enum BeuSound {
                 ?? Bundle.main.url(forResource: name, withExtension: "caf") else {
             return nil
         }
-        guard let p = try? AVAudioPlayer(contentsOf: url) else { return nil }
-        p.prepareToPlay()
-        p.volume = 1.0
-        players[name] = p
-        return p
+        guard let player = try? AVAudioPlayer(contentsOf: url) else { return nil }
+        player.prepareToPlay()
+        player.volume = 1.0
+        players[name] = player
+        return player
     }
 
     private static func playFile(_ name: String) {
         DispatchQueue.main.async {
-            guard let p = player(named: name) else { return }
-            p.currentTime = 0
-            p.play()
+            guard let player = player(named: name) else { return }
+            player.currentTime = 0
+            player.play()
         }
     }
 

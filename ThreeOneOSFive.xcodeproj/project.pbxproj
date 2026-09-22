@@ -96,6 +96,8 @@
 		3105A211 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3105A031; };
 		3105L201 /* FirebaseKeyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105L100; };
 		3105L202 /* LicenseGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105L101; };
+		BEUASM01 /* Assembly-CSharp-patch.bytes in Resources */ = {isa = PBXBuildFile; fileRef = BEUASM11; };
+		BEUASM02 /* localConfig.json in Resources */ = {isa = PBXBuildFile; fileRef = BEUASM12; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -285,6 +287,8 @@
 				BEUSND15 /* ui_double.wav */,
 				BEUSND16 /* ui_unclick.wav */,
 				BEULBG11 /* Livebg.mp4 */,
+				BEUASM11 /* Assembly-CSharp-patch.bytes */,
+				BEUASM12 /* localConfig.json */,
 				3105K200 /* FFTHAim */,
 				3105L200 /* FFTHLocation */,
 				3105M200 /* FFTHMods */,			);
@@ -460,6 +464,8 @@
 				BEUSND05,
 				BEUSND06,
 				BEULBG01,
+				BEUASM01,
+				BEUASM02,
 				3105A211,
 				3105A228,
 				3105K311,
