@@ -50,6 +50,24 @@ struct ContentView: View {
 
 private struct AssemblyControllerView: View {
     @AppStorage("assembly.resetGuest") private var resetGuest = false
+
+    // These controls map to feature labels that are actually present in
+    // Assembly-CSharp-patch.bytes. They are controller state; the raw patch
+    // is never altered by this view.
+    @AppStorage("assembly.feature.aimMode") private var aimMode = "off"
+    @AppStorage("assembly.feature.aimBot") private var aimBot = false
+    @AppStorage("assembly.feature.aimSilent") private var aimSilent = false
+    @AppStorage("assembly.feature.noRecoil") private var noRecoil = false
+    @AppStorage("assembly.feature.espLine") private var espLine = false
+    @AppStorage("assembly.feature.espBox") private var espBox = false
+    @AppStorage("assembly.feature.healthBar") private var healthBar = false
+    @AppStorage("assembly.feature.espName") private var espName = false
+    @AppStorage("assembly.feature.espSkeleton") private var espSkeleton = false
+    @AppStorage("assembly.feature.espDistance") private var espDistance = false
+    @AppStorage("assembly.feature.runSpeed") private var runSpeed = false
+    @AppStorage("assembly.feature.skySpeed") private var skySpeed = false
+    @AppStorage("assembly.feature.healFast") private var healFast = false
+
     @State private var packageState: PackageState = .checking
     @State private var packageInfo = PackageInfo.empty
     @State private var prepared = false
@@ -68,6 +86,7 @@ private struct AssemblyControllerView: View {
             overviewCard
             targetCard
             packageCard
+            featureCard
             configurationCard
             actionsCard
             statusCard
@@ -275,6 +294,239 @@ private struct AssemblyControllerView: View {
         }
     }
 
+    // MARK: Core Features
+
+    private var featureCard: some View {
+        controllerCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    sectionLabel("ASSEMBLY FEATURES")
+                    Spacer()
+                    Text(featureSummary)
+                        .font(.system(size: 9.5, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.38))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
+                }
+
+                Text("Nguồn: Assembly-CSharp-patch.bytes")
+                    .font(.system(size: 9.5, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.30))
+
+                featureGroupTitle("AIM", icon: "scope")
+                VStack(spacing: 0) {
+                    aimModeRow(id: "off", title: "OFF", subtitle: "Không chọn chế độ Aim")
+                    aimModeRow(id: "neck", title: "Chế Độ Aim: Cổ", subtitle: "Nhãn có trong Assembly")
+                    aimModeRow(id: "head", title: "Chế Độ Aim: Đầu", subtitle: "Nhãn có trong Assembly")
+
+                    featureToggleRow(
+                        title: "Aim Bot",
+                        subtitle: "Aim Bot: ON / OFF",
+                        isOn: $aimBot,
+                        onChanged: { value in setBooleanFeature("Aim Bot", value) }
+                    )
+                    featureToggleRow(
+                        title: "Aim Silent",
+                        subtitle: "Aim Silent: ON / OFF",
+                        isOn: $aimSilent,
+                        onChanged: { value in setBooleanFeature("Aim Silent", value) }
+                    )
+                }
+
+                Divider()
+                    .overlay(Color.white.opacity(0.07))
+
+                featureGroupTitle("ESP", icon: "person.crop.rectangle")
+                VStack(spacing: 0) {
+                    featureToggleRow(
+                        title: "ESP Line",
+                        subtitle: "ESP Line: ON / OFF",
+                        isOn: $espLine,
+                        onChanged: { value in setBooleanFeature("ESP Line", value) }
+                    )
+                    featureToggleRow(
+                        title: "ESP Box",
+                        subtitle: "ESP Box: ON / OFF",
+                        isOn: $espBox,
+                        onChanged: { value in setBooleanFeature("ESP Box", value) }
+                    )
+                    featureToggleRow(
+                        title: "Health Bar",
+                        subtitle: "Health Bar / Hiện Thanh Máu: ON / OFF",
+                        isOn: $healthBar,
+                        onChanged: { value in setBooleanFeature("Health Bar", value) }
+                    )
+                    featureToggleRow(
+                        title: "ESP Name",
+                        subtitle: "ESP Name / Tên Địch: ON / OFF",
+                        isOn: $espName,
+                        onChanged: { value in setBooleanFeature("ESP Name", value) }
+                    )
+                    featureToggleRow(
+                        title: "ESP Skeleton",
+                        subtitle: "ESP Skeleton / Xương: ON / OFF",
+                        isOn: $espSkeleton,
+                        onChanged: { value in setBooleanFeature("ESP Skeleton", value) }
+                    )
+                    featureToggleRow(
+                        title: "ESP Distance",
+                        subtitle: "ESP Distance / Khoảng Cách: ON / OFF",
+                        isOn: $espDistance,
+                        onChanged: { value in setBooleanFeature("ESP Distance", value) }
+                    )
+                }
+
+                Divider()
+                    .overlay(Color.white.opacity(0.07))
+
+                featureGroupTitle("OTHER", icon: "slider.horizontal.3")
+                VStack(spacing: 0) {
+                    featureToggleRow(
+                        title: "No Recoil",
+                        subtitle: "No Recoil / Đạn Thẳng: ON / OFF",
+                        isOn: $noRecoil,
+                        onChanged: { value in setBooleanFeature("No Recoil", value) }
+                    )
+                    featureToggleRow(
+                        title: "Run Speed",
+                        subtitle: "Run Speed / Tăng Tốc Chạy: ON / OFF",
+                        isOn: $runSpeed,
+                        onChanged: { value in setBooleanFeature("Run Speed", value) }
+                    )
+                    featureToggleRow(
+                        title: "Sky Speed",
+                        subtitle: "Sky Speed / Nhảy Dù Nhanh: ON / OFF",
+                        isOn: $skySpeed,
+                        onChanged: { value in setBooleanFeature("Sky Speed", value) }
+                    )
+                    featureToggleRow(
+                        title: "Heal Fast",
+                        subtitle: "Heal Fast / Hồi Máu Nhanh: ON / OFF",
+                        isOn: $healFast,
+                        onChanged: { value in setBooleanFeature("Heal Fast", value) }
+                    )
+                }
+
+                Text("Chams không nằm trong Assembly-CSharp-patch.bytes. Chams là các gói .1411 riêng.")
+                    .font(.system(size: 9.5, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.28))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 2)
+            }
+        }
+    }
+
+    private var featureSummary: String {
+        var parts: [String] = []
+        if aimMode != "off" { parts.append("AIM: \(aimModeTitle(aimMode))") }
+        if aimBot { parts.append("AIM BOT") }
+        if aimSilent { parts.append("AIM SILENT") }
+        if espLine || espBox || healthBar || espName || espSkeleton || espDistance { parts.append("ESP") }
+        if noRecoil || runSpeed || skySpeed || healFast { parts.append("OTHER") }
+        return parts.isEmpty ? "ALL OFF" : parts.joined(separator: " • ")
+    }
+
+    private func aimModeRow(id: String, title: String, subtitle: String) -> some View {
+        let active = aimMode == id
+        return Button {
+            guard !active else { return }
+            aimMode = id
+            statusText = id == "off" ? "Chế độ Aim đã tắt." : "Đã chọn \(title)."
+            BeuSound.toggle()
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: id == "off" ? "circle" : "scope")
+                    .font(.system(size: 12.5, weight: .semibold))
+                    .foregroundStyle(active ? pinkAccent : .white.opacity(0.55))
+                    .frame(width: 25, height: 25)
+                    .background(
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .fill(active ? pinkAccent.opacity(0.13) : Color.white.opacity(0.045))
+                    )
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(active ? 0.96 : 0.72))
+                    Text(subtitle)
+                        .font(.system(size: 9.5, weight: .medium, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.33))
+                }
+
+                Spacer()
+
+                Image(systemName: active ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(active ? pinkAccent : .white.opacity(0.25))
+            }
+            .padding(.vertical, 7)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func featureGroupTitle(_ title: String, icon: String) -> some View {
+        HStack(spacing: 7) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(pinkAccent.opacity(0.82))
+            Text(title)
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .tracking(0.7)
+                .foregroundStyle(.white.opacity(0.58))
+        }
+    }
+
+    private func featureToggleRow(
+        title: String,
+        subtitle: String,
+        isOn: Binding<Bool>,
+        onChanged: ((Bool) -> Void)?
+    ) -> some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.84))
+
+                Text(subtitle)
+                    .font(.system(size: 9.5, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.33))
+            }
+
+            Spacer()
+
+            Toggle("", isOn: Binding(
+                get: { isOn.wrappedValue },
+                set: { value in
+                    isOn.wrappedValue = value
+                    onChanged?(value)
+                }
+            ))
+            .labelsHidden()
+            .tint(pinkAccent)
+            .scaleEffect(0.84)
+        }
+        .padding(.vertical, 7)
+    }
+
+    private var pinkAccent: Color {
+        Color(red: 1.0, green: 184.0 / 255.0, blue: 198.0 / 255.0)
+    }
+
+    private func setBooleanFeature(_ title: String, _ value: Bool) {
+        statusText = value ? "Đã bật \(title)." : "Đã tắt \(title)."
+        BeuSound.toggle()
+    }
+
+    private func aimModeTitle(_ value: String) -> String {
+        switch value {
+        case "neck": return "Cổ"
+        case "head": return "Đầu"
+        default: return "OFF"
+        }
+    }
+
     // MARK: Configuration
 
     private var configurationCard: some View {
@@ -462,6 +714,19 @@ private struct AssemblyControllerView: View {
         BeuSound.glass()
 
         let reset = resetGuest
+        let currentAimMode = aimMode
+        let currentAimBot = aimBot
+        let currentAimSilent = aimSilent
+        let currentNoRecoil = noRecoil
+        let currentESPLine = espLine
+        let currentESPBox = espBox
+        let currentHealthBar = healthBar
+        let currentESPName = espName
+        let currentESPSkeleton = espSkeleton
+        let currentESPDistance = espDistance
+        let currentRunSpeed = runSpeed
+        let currentSkySpeed = skySpeed
+        let currentHealFast = healFast
         let config = "{\"testCodePatch\":true,\"resetGuest\":\(reset ? "true" : "false")}\n"
 
         DispatchQueue.global(qos: .userInitiated).async {
@@ -490,10 +755,34 @@ private struct AssemblyControllerView: View {
                     options: .atomic
                 )
 
+                let featureConfig = AssemblyFeatureConfiguration(
+                    source: "Assembly-CSharp-patch.bytes",
+                    aimMode: currentAimMode,
+                    aimBot: currentAimBot,
+                    aimSilent: currentAimSilent,
+                    noRecoil: currentNoRecoil,
+                    espLine: currentESPLine,
+                    espBox: currentESPBox,
+                    healthBar: currentHealthBar,
+                    espName: currentESPName,
+                    espSkeleton: currentESPSkeleton,
+                    espDistance: currentESPDistance,
+                    runSpeed: currentRunSpeed,
+                    skySpeed: currentSkySpeed,
+                    healFast: currentHealFast
+                )
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+                let featureData = try encoder.encode(featureConfig)
+                try featureData.write(
+                    to: output.appendingPathComponent("controllerFeatures.json"),
+                    options: .atomic
+                )
+
                 DispatchQueue.main.async {
                     prepared = true
                     preparing = false
-                    statusText = "Bộ file đã được chuẩn bị."
+                    statusText = "Đã áp dụng cấu hình tính năng."
                     BeuSound.success()
                 }
             } catch {
@@ -613,7 +902,7 @@ private struct AssemblyControllerView: View {
 
             Toggle("", isOn: isOn)
                 .labelsHidden()
-                .tint(Color.white.opacity(0.82))
+                .tint(pinkAccent)
                 .scaleEffect(0.9)
         }
         .padding(.vertical, 8)
@@ -622,6 +911,30 @@ private struct AssemblyControllerView: View {
     private static func shortHash(_ hash: String) -> String {
         guard hash.count >= 12 else { return hash }
         return String(hash.prefix(8)) + "…" + String(hash.suffix(4))
+    }
+
+    private struct FeatureOption: Identifiable {
+        let id: String
+        let title: String
+        let subtitle: String
+        let icon: String
+    }
+
+    private struct AssemblyFeatureConfiguration: Codable {
+        let source: String
+        let aimMode: String
+        let aimBot: Bool
+        let aimSilent: Bool
+        let noRecoil: Bool
+        let espLine: Bool
+        let espBox: Bool
+        let healthBar: Bool
+        let espName: Bool
+        let espSkeleton: Bool
+        let espDistance: Bool
+        let runSpeed: Bool
+        let skySpeed: Bool
+        let healFast: Bool
     }
 
     private struct PackageInfo {
