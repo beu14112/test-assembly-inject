@@ -14,8 +14,8 @@
 		BEUSND05 /* ui_double.wav in Resources */ = {isa = PBXBuildFile; fileRef = BEUSND15; };
 		BEUSND06 /* ui_unclick.wav in Resources */ = {isa = PBXBuildFile; fileRef = BEUSND16; };
 		BEULBG01 /* Livebg.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = BEULBG11; };
-		3105M313 /* Quai_Nhan_Den.png in Resources */ = {isa = PBXBuildFile; fileRef = 3105M303; };
-		3105M314 /* Gojo_Wolfrahh.png in Resources */ = {isa = PBXBuildFile; fileRef = 3105M304; };
+		BEUASM01 /* Assembly-CSharp-patch.bytes in Resources */ = {isa = PBXBuildFile; fileRef = BEUASM11; };
+		BEUASM02 /* localConfig.json in Resources */ = {isa = PBXBuildFile; fileRef = BEUASM12; };
 
 
 
@@ -82,13 +82,9 @@
 		3105A211 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3105A031; };
 		3105L201 /* FirebaseKeyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105L100; };
 		3105L202 /* LicenseGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105L101; };
-		BEUASM01 /* Assembly-CSharp-patch.bytes in Resources */ = {isa = PBXBuildFile; fileRef = BEUASM11; };
-		BEUASM02 /* localConfig.json in Resources */ = {isa = PBXBuildFile; fileRef = BEUASM12; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		3105M303 /* Quai_Nhan_Den.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Quai_Nhan_Den.png; sourceTree = "<group>"; };
-		3105M304 /* Gojo_Wolfrahh.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Gojo_Wolfrahh.png; sourceTree = "<group>"; };
 		BEUSND11 /* ui_click.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = ui_click.caf; path = Sounds/ui_click.caf; sourceTree = "<group>"; };
 		BEUSND12 /* ui_double.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = ui_double.caf; path = Sounds/ui_double.caf; sourceTree = "<group>"; };
 		BEUSND13 /* ui_unclick.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = ui_unclick.caf; path = Sounds/ui_unclick.caf; sourceTree = "<group>"; };
@@ -96,6 +92,8 @@
 		BEUSND15 /* ui_double.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; name = ui_double.wav; path = Sounds/ui_double.wav; sourceTree = "<group>"; };
 		BEUSND16 /* ui_unclick.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; name = ui_unclick.wav; path = Sounds/ui_unclick.wav; sourceTree = "<group>"; };
 		BEULBG11 /* Livebg.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = Livebg.mp4; path = Livebg.mp4; sourceTree = "<group>"; };
+		BEUASM11 /* Assembly-CSharp-patch.bytes */ = {isa = PBXFileReference; lastKnownFileType = file; name = Assembly-CSharp-patch.bytes; path = BundledPatches/AssemblyDemo/Assembly-CSharp-patch.bytes; sourceTree = "<group>"; };
+		BEUASM12 /* localConfig.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = localConfig.json; path = BundledPatches/AssemblyDemo/localConfig.json; sourceTree = "<group>"; };
 
 
 
@@ -195,6 +193,16 @@
 
 
 
+		BEUASM20 /* AssemblyDemo */ = {
+			isa = PBXGroup;
+			children = (
+				BEUASM11 /* Assembly-CSharp-patch.bytes */,
+				BEUASM12 /* localConfig.json */,
+			);
+			path = BundledPatches/AssemblyDemo;
+			sourceTree = "<group>";
+		};
+
 		3105A400 = {
 			isa = PBXGroup;
 			children = (
@@ -223,8 +231,8 @@
 				BEUSND15 /* ui_double.wav */,
 				BEUSND16 /* ui_unclick.wav */,
 				BEULBG11 /* Livebg.mp4 */,
-				BEUASM11 /* Assembly-CSharp-patch.bytes */,
-				BEUASM12 /* localConfig.json */,
+				BEUASM20 /* AssemblyDemo */,
+			);
 			path = ThreeOneOSFive;
 			sourceTree = "<group>";
 		};
@@ -287,6 +295,7 @@
 				3105B116 /* PatchKeyStore.swift */,
 				3105B117 /* PatchTransaction.swift */,
 				3105B118 /* DevicePatchService.swift */,
+
 				3105B119 /* PatchProjectLibrary.swift */,
 				3105B120 /* PatchProjectStore.swift */,
 				3105G103 /* PatchWorkspaceService.swift */,
@@ -400,15 +409,7 @@
 				BEUASM02,
 				3105A211,
 				3105A228,
-				3105L311,
-				3105L312,
-				3105L313,
-				3105L314,
-				3105M311,
-				3105M312,
-				3105M313,
-				3105M314,
-				3105M315,
+
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -443,6 +444,7 @@
 				3105B216,
 				3105B217,
 				3105B218,
+
 				3105B219,
 				3105B220,
 				3105B221,
