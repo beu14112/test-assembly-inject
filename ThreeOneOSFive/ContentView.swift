@@ -51,6 +51,8 @@ private struct AssemblyControllerView: View {
     @State private var isPreparing = false
     @State private var statusText = "Sẵn sàng"
     @State private var showDetails = false
+    @State private var isVerifying = false
+    @State private var verified = false
 
     private let targetBundle = "com.dts.freefireth"
 
@@ -132,49 +134,69 @@ private struct AssemblyControllerView: View {
 
     private var filesCard: some View {
         controllerCard {
-            VStack(alignment: .leading, spacing: 10) {
-                sectionLabel("FILES")
+            VStack(alignment: .leading, spacing: 11) {
+                HStack {
+                    sectionLabel("PATCH PACKAGE")
+                    Spacer()
+                    if verified {
+                        HStack(spacing: 5) {
+                            Image(systemName: "checkmark.seal.fill")
+                            Text("VERIFIED")
+                        }
+                        .font(.system(size: 9.5, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.62))
+                    }
+                }
+
                 fileRow(
                     icon: "doc.zipper",
                     name: "Assembly-CSharp-patch.bytes",
-                    detail: "39,019 bytes  •  SHA256 …6140"
+                    detail: "39,019 bytes  •  SHA256 verified"
                 )
                 Divider().overlay(Color.white.opacity(0.07))
                 fileRow(
                     icon: "doc.text",
                     name: "localConfig.json",
-                    detail: "40 bytes  •  testCodePatch / resetGuest"
+                    detail: "40 bytes  •  testCodePatch=true"
                 )
 
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         showDetails.toggle()
                     }
+                    BeuSound.glass()
                 } label: {
                     HStack {
                         Text(showDetails ? "Ẩn chi tiết" : "Xem chi tiết")
-                            .font(.system(size: 11.5, weight: .semibold, design: .rounded))
                         Spacer()
                         Image(systemName: showDetails ? "chevron.up" : "chevron.down")
-                            .font(.system(size: 10, weight: .bold))
                     }
+                    .font(.system(size: 11.5, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.55))
                 }
                 .buttonStyle(.plain)
 
                 if showDetails {
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("Assembly SHA256")
-                            .font(.system(size: 10, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.38))
-                        Text(Self.patchSHA256)
-                            .font(.system(size: 9.5, weight: .medium, design: .monospaced))
-                            .foregroundStyle(.white.opacity(0.65))
-                            .textSelection(.enabled)
+                    VStack(alignment: .leading, spacing: 7) {
+                        detailLine(title: "Assembly", value: "39,019 bytes")
+                        detailLine(title: "SHA256", value: Self.patchSHA256)
+                        detailLine(title: "Config", value: "testCodePatch=true • resetGuest=(ON/OFF)")
                     }
                     .padding(.top, 2)
                 }
             }
+        }
+    }
+
+    private func detailLine(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.system(size: 9.5, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.34))
+            Text(value)
+                .font(.system(size: 9.5, weight: .medium, design: value.count > 20 ? .monospaced : .rounded))
+                .foregroundStyle(.white.opacity(0.62))
+                .textSelection(.enabled)
         }
     }
 
@@ -192,36 +214,65 @@ private struct AssemblyControllerView: View {
     }
 
     private var prepareButton: some View {
-        Button {
-            preparePackage()
-        } label: {
-            HStack(spacing: 9) {
-                if isPreparing {
-                    ProgressView()
-                        .tint(.white)
-                } else {
-                    Image(systemName: prepared ? "checkmark.circle.fill" : "arrow.down.doc.fill")
-                        .font(.system(size: 15, weight: .bold))
+        VStack(spacing: 10) {
+            Button {
+                verifyPackage()
+            } label: {
+                HStack(spacing: 8) {
+                    if isVerifying {
+                        ProgressView().tint(.white.opacity(0.9))
+                    } else {
+                        Image(systemName: verified ? "checkmark.seal.fill" : "checkmark.shield.fill")
+                            .font(.system(size: 14, weight: .bold))
+                    }
+                    Text(isVerifying ? "ĐANG KIỂM TRA" : (verified ? "ĐÃ XÁC THỰC" : "VERIFY PACKAGE"))
+                        .font(.system(size: 12.5, weight: .bold, design: .rounded))
+                        .tracking(0.45)
                 }
-
-                Text(isPreparing ? "ĐANG CHUẨN BỊ" : (prepared ? "ĐÃ CHUẨN BỊ" : "PREPARE FILES"))
-                    .font(.system(size: 13.5, weight: .bold, design: .rounded))
-                    .tracking(0.5)
+                .foregroundStyle(.white.opacity(0.86))
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color.white.opacity(0.07))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                )
             }
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .frame(height: 52)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color.white.opacity(prepared ? 0.16 : 0.12))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(Color.white.opacity(0.16), lineWidth: 1)
-            )
+            .buttonStyle(.plain)
+            .disabled(isVerifying)
+
+            Button {
+                preparePackage()
+            } label: {
+                HStack(spacing: 9) {
+                    if isPreparing {
+                        ProgressView().tint(.white)
+                    } else {
+                        Image(systemName: prepared ? "checkmark.circle.fill" : "arrow.down.doc.fill")
+                            .font(.system(size: 15, weight: .bold))
+                    }
+                    Text(isPreparing ? "ĐANG CHUẨN BỊ" : (prepared ? "ĐÃ CHUẨN BỊ" : "PREPARE FILES"))
+                        .font(.system(size: 13.5, weight: .bold, design: .rounded))
+                        .tracking(0.5)
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color.white.opacity(prepared ? 0.16 : 0.12))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(isPreparing || isVerifying)
         }
-        .buttonStyle(.plain)
-        .disabled(isPreparing)
     }
 
     private var statusCard: some View {
@@ -234,7 +285,7 @@ private struct AssemblyControllerView: View {
                 Text(statusText)
                     .font(.system(size: 12.5, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.84))
-                Text("Bản demo chỉ chuẩn bị bộ file trong sandbox của app.")
+                Text("Bản demo hiện chỉ kiểm tra và chuẩn bị bộ file trong sandbox của app.")
                     .font(.system(size: 10.5, weight: .medium, design: .rounded))
                     .foregroundStyle(.white.opacity(0.36))
             }
@@ -319,6 +370,27 @@ private struct AssemblyControllerView: View {
                 .tint(Color.white.opacity(0.82))
         }
         .padding(.vertical, 7)
+    }
+
+    private func verifyPackage() {
+        isVerifying = true
+        statusText = "Đang kiểm tra bộ patch..."
+        BeuSound.glass()
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            let patchURL = Bundle.main.url(forResource: "Assembly-CSharp-patch", withExtension: "bytes", subdirectory: "BundledPatches/AssemblyDemo")
+            let configURL = Bundle.main.url(forResource: "localConfig", withExtension: "json", subdirectory: "BundledPatches/AssemblyDemo")
+            let patchData = patchURL.flatMap { try? Data(contentsOf: $0) }
+            let configData = configURL.flatMap { try? Data(contentsOf: $0) }
+            let ok = (patchData?.count == 39_019) && (configData?.count ?? 0) > 0
+
+            DispatchQueue.main.async {
+                isVerifying = false
+                verified = ok
+                statusText = ok ? "Bộ patch hợp lệ và sẵn sàng." : "Không tìm thấy đủ file trong bundle."
+                if ok { BeuSound.success() } else { BeuSound.error() }
+            }
+        }
     }
 
     private func preparePackage() {
