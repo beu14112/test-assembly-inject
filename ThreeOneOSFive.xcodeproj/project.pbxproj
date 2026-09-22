@@ -18,7 +18,6 @@
 		BEUASM02 /* localConfig.json in Resources */ = {isa = PBXBuildFile; fileRef = BEUASM12; };
 
 
-
 		3105A200 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105A020; };
 		3105A201 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105A021; };
 		3105A203 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105A023; };
@@ -92,9 +91,8 @@
 		BEUSND15 /* ui_double.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; name = ui_double.wav; path = Sounds/ui_double.wav; sourceTree = "<group>"; };
 		BEUSND16 /* ui_unclick.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; name = ui_unclick.wav; path = Sounds/ui_unclick.wav; sourceTree = "<group>"; };
 		BEULBG11 /* Livebg.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = Livebg.mp4; path = Livebg.mp4; sourceTree = "<group>"; };
-		BEUASM11 /* Assembly-CSharp-patch.bytes */ = {isa = PBXFileReference; lastKnownFileType = file; name = Assembly-CSharp-patch.bytes; path = BundledPatches/AssemblyDemo/Assembly-CSharp-patch.bytes; sourceTree = "<group>"; };
-		BEUASM12 /* localConfig.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = localConfig.json; path = BundledPatches/AssemblyDemo/localConfig.json; sourceTree = "<group>"; };
-
+		BEUASM11 /* Assembly-CSharp-patch.bytes */ = {isa = PBXFileReference; lastKnownFileType = file; name = Assembly-CSharp-patch.bytes; path = Assembly-CSharp-patch.bytes; sourceTree = "<group>"; };
+		BEUASM12 /* localConfig.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = localConfig.json; path = localConfig.json; sourceTree = "<group>"; };
 
 
 		3105A010 /* beu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "beu.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -192,7 +190,6 @@
 /* Begin PBXGroup section */
 
 
-
 		BEUASM20 /* AssemblyDemo */ = {
 			isa = PBXGroup;
 			children = (
@@ -232,6 +229,7 @@
 				BEUSND16 /* ui_unclick.wav */,
 				BEULBG11 /* Livebg.mp4 */,
 				BEUASM20 /* AssemblyDemo */,
+
 			);
 			path = ThreeOneOSFive;
 			sourceTree = "<group>";
@@ -295,7 +293,6 @@
 				3105B116 /* PatchKeyStore.swift */,
 				3105B117 /* PatchTransaction.swift */,
 				3105B118 /* DevicePatchService.swift */,
-
 				3105B119 /* PatchProjectLibrary.swift */,
 				3105B120 /* PatchProjectStore.swift */,
 				3105G103 /* PatchWorkspaceService.swift */,
@@ -409,7 +406,6 @@
 				BEUASM02,
 				3105A211,
 				3105A228,
-
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -444,7 +440,6 @@
 				3105B216,
 				3105B217,
 				3105B218,
-
 				3105B219,
 				3105B220,
 				3105B221,
